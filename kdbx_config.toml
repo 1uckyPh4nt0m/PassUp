@@ -1,0 +1,3 @@
+type_of_db = "kdbx"
+path_to_kdbx = "tests/resources/test_db.kdbx"
+kdbx_password = "password123"

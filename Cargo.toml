@@ -1,0 +1,18 @@
+[package]
+name = "PassUp"
+version = "0.1.0"
+authors = ["Gabriel Vukovic <gabriel.vukovic@student.tugraz.at>"]
+edition = "2018"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+rust-kpdb = "0.4.2"
+rand = "*"
+crypt = "*"
+dirs = "*"
+clap = "2.33.3"
+toml = "0.5.7"
+[dependencies.passwords]
+version = "*"
+features = ["crypto"]
