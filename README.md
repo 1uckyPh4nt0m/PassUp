@@ -1,4 +1,4 @@
-PassUp
+## PassUp
 
 Automatically update passwords from common Password Managers. Supported Password Managers are:
 - pass
