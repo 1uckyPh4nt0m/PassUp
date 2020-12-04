@@ -10,11 +10,6 @@ module.exports = {
 
 	browser
 		.url(url)
-	// const oldPasswd = 'password123';
-    // const newPasswd = 'password456';
-    // const userName = 'bachelor1';
-    // browser
-	// .url('https://www.lichess.org/')
       	.waitForElementVisible('body')
 		.click('a.signin.button')
       	.setValue('#form3-username', userName)
