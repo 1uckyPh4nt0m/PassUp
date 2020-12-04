@@ -13,19 +13,18 @@ use std::fs;
 
 fn main() {
     let matches = App::new("PassUp")
-                          .version("0.1")
-                          .author("Gabriel V. <gabriel.vuk@gmail.com>")
-                          .about("Automatically updates password databases of pass and keepass")
-                          .arg(Arg::with_name("config")
+                            .version("0.1")
+                            .author("Gabriel V. <gabriel.vukovic@student.tugraz.com>")
+                            .about("Automatically updates password databases of pass and keepass")
+                            .arg(Arg::with_name("config")
                                 .short("c")
                                 .long("config")
                                 .value_name("FILE")
                                 .help("Sets a custom config file")
                                 .takes_value(true)
                                 .required(true))
-                          .get_matches();
+                            .get_matches();
 
-    // Gets a value for config if supplied by user, or defaults to "default.conf"
     let config_path = matches.value_of("config").unwrap_or("config.toml");
     println!("Path of config: {}", config_path);
 
@@ -40,8 +39,14 @@ fn main() {
         Some(db_type) => db_type,
         None => panic!("type_of_db missing in provided config file!"),
     };
+
+    let script_dir = match value["script_dir"].as_str() {
+        Some(script_dir) => script_dir,
+        None => panic!("script_dir missing in provided config file!"),
+    };
+
     if db_type.eq("kdbx") {
-        let path = match value["path_to_kdbx"].as_str() {
+        let db_path = match value["path_to_kdbx"].as_str() {
             Some(path) => path,
             None => panic!("path_to_kdbx missing in provided config file!"),
         };
@@ -49,18 +54,8 @@ fn main() {
             Some(db_password) => db_password,
             None => panic!("kdbx_password missing in provided config file!"),
         };
-        kdbx::run(path, db_password);
+        kdbx::run(db_path, db_password, script_dir);
     } else if db_type.eq("pass") {
-        pass::run();
-    } else {
-        print_usage();
+        pass::run(script_dir);
     }
-}
-
-fn print_usage() {
-    let args: Vec<String> = env::args().collect();
-
-    println!("Usage:");
-    println!("      {} --config=path_to_config", args[0]);
-    println!("      {} -c path_to_config", args[0]);
 }

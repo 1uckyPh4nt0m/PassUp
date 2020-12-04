@@ -25,9 +25,9 @@ pub fn cmd(program: &str, args: &[&str]) -> Output {
         .expect("failed to execute process");
 }
 
-pub fn exec_nightwatch(url: &str, username: &str, old_pass: &str, new_pass: &str) -> Output {
+pub fn exec_nightwatch(script_path: &str, url: &str, username: &str, old_pass: &str, new_pass: &str) -> Output {
     let output = cmd("nightwatch", 
-            &["--headless", "--env", "firefox", "--test", "scripts/lichess.js", 
+            &["--headless", "--env", "firefox", "--test", script_path, 
             url, username, old_pass, new_pass]);
     return output;
 }
