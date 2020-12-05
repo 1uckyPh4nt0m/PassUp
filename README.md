@@ -9,7 +9,8 @@ Automatically update passwords from common Password Managers. Supported Password
 ## Getting Started
 ### Prerequisites
 
-## Config
+## Config file
+Allows you to choose between pass and the kdbx variant.
 ### Example configurations:
 #### kdbx
 ```
@@ -25,3 +26,7 @@ type_of_db = "pass"
 script_dir = "path_to_script_directory"
 blacklist = ["url1", "url2", ...]
 ```
+Store the config file as a ".toml".
+
+## Program Arguments
+The program takes one argument which is the path to the config file.
