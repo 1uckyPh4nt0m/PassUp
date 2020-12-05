@@ -16,8 +16,8 @@ struct PWDB {
     passwords_: Vec<String>
 }
 
-pub fn run(script_dir: &str) {
-    let result = parse_pass();
+pub fn run(script_dir: String, blacklist: Vec<String>) {
+    let result = parse_pass(blacklist);
     if result.is_err() {
         println!("parsing failed!");
         return;
@@ -32,13 +32,13 @@ pub fn run(script_dir: &str) {
             let old_pass = &entry.passwords_[i];
             let new_pass = &get_pw();
             println!("{}, {}, {}, {}", url, username, old_pass, new_pass);
-            let dir_r = fs::read_dir(script_dir);
+            let dir_r = fs::read_dir(&script_dir);
             let dir = match dir_r {
                 Ok(dir) => dir,
                 Err(e) => panic!("Reading scripts folder: {}", e),
             };
             let mut script_path = PathBuf::new();
-            script_path.push(script_dir);
+            script_path.push(&script_dir);
             for dir_entry_r in dir {
                 let dir_entry = match dir_entry_r {
                     Ok(dir_entry) => dir_entry,
@@ -93,7 +93,7 @@ pub fn run(script_dir: &str) {
     }
 }
 
-fn parse_pass() -> Result<Vec<PWDB>, u8> {
+fn parse_pass(blacklist: Vec<String>) -> Result<Vec<PWDB>, u8> {
     let mut path = PathBuf::new();
     path.push(dirs::home_dir().unwrap());
     path.push(".password-store");
@@ -148,8 +148,10 @@ fn parse_pass() -> Result<Vec<PWDB>, u8> {
             let password = str::from_utf8(&child.stdout).unwrap().replace("\n", "");
             passwords.push(password);
         }
-        let pw_db = PWDB{url_: entry.url_, users_: entry.users_, passwords_: passwords};
-        db_data_full.push(pw_db);
+        if !blacklist.contains(&entry.url_) {
+            let pw_db = PWDB{url_: entry.url_, users_: entry.users_, passwords_: passwords};
+            db_data_full.push(pw_db);
+        }
     }
     return Ok(db_data_full);
 }

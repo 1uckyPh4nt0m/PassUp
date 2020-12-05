@@ -10,7 +10,7 @@ use kpdb::{CompositeKey, Database};
 
 use crate::utils::{get_pw, exec_nightwatch};
 
-pub fn run(path: &str, db_password: &str, script_dir: &str) {
+pub fn run(path: String, db_password: String, script_dir: String, blacklist: Vec<String>) {
     let mut file = File::open(path).ok().unwrap();
     let key = CompositeKey::from_password(db_password);
     let mut db = Database::open(&mut file, &key).unwrap();
@@ -20,15 +20,18 @@ pub fn run(path: &str, db_password: &str, script_dir: &str) {
         let url = entry.url().unwrap();
         let old_pass = entry.password().unwrap();
         let new_pass = &get_pw();
-        println!("Entry '{0}': '{1}' : '{2}' : '{3}'", url, username, old_pass, new_pass);
+        if blacklist.contains(&url.to_string()) {
+            continue;
+        }
+        println!("Entry '{}': '{}' : '{}' : '{}'", url, username, old_pass, new_pass);
 
-        let dir_r = fs::read_dir(script_dir);
+        let dir_r = fs::read_dir(&script_dir);
         let dir = match dir_r {
             Ok(dir) => dir,
             Err(e) => panic!("Reading scripts folder: {}", e),
         };
         let mut script_path = PathBuf::new();
-        script_path.push(script_dir);
+        script_path.push(&script_dir);
         for dir_entry_r in dir {
             let dir_entry = match dir_entry_r {
                 Ok(dir_entry) => dir_entry,
