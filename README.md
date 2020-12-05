@@ -10,7 +10,7 @@ Automatically update passwords from common Password Managers. Supported Password
 ### Prerequisites
 
 ## Config
-###Example configurations:
+### Example configurations:
 #### kdbx
 ```
 type_of_db = "kdbx"
