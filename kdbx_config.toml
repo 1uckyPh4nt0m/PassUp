@@ -1,0 +1,25 @@
+active_profile = "my-private-keepassx"
+
+[profile.my-private-keepassx]
+type = "kdbx"
+sources = [ "private-kdbx" ]
+
+[profile.work-pass]
+type = "pass"
+
+[[sources]]
+name = "private-kdbx"
+file = "tests/resources/test_db.kdbx"
+blocklist = [ "google.com", "no-password-but-note" ]
+
+[[scripts]]
+dir = "./scripts"
+blocklist = [ "live.com.js" ]
+
+[urls]
+"([^/]{1,30}://)?[^/]+gmail.com(/$|/.*)" = "google.com.js"
+"skype.com/" = "live.com.js"
+"non-domain-name-in-DB-file" = ""
+
+[[scripts]]
+dir = "development/my-custom-PassUp-scripts"

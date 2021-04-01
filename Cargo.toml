@@ -8,11 +8,13 @@ edition = "2018"
 
 [dependencies]
 rust-kpdb = "0.4.2"
-rand = "*"
-crypt = "*"
-dirs = "*"
+rand = "0.8.3"
+crypt = "0.1.0"
+dirs = "3.0.1"
 clap = "2.33.3"
-toml = "0.5.7"
+toml = "0.5.8"
+rpassword = "5.0.1"
+url = "2.2.1"
 [dependencies.passwords]
-version = "*"
+version = "3.1.4"
 features = ["crypto"]

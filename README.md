@@ -26,7 +26,7 @@ type_of_db = "pass"
 script_dir = "path_to_script_directory"
 blacklist = ["url1", "url2", ...]
 ```
-Store the config file as a ".toml".
+Store the config file as a *.toml* file.
 
 ## Program Arguments
 The program takes one argument which is the path to the config file.

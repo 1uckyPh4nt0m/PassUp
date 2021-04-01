@@ -4,7 +4,7 @@ mod utils;
 
 extern crate clap;
 use clap::{Arg, App};
-use utils::parse_config;
+use utils::{parse_config};
 
 
 fn main() {
@@ -22,13 +22,12 @@ fn main() {
                             .get_matches();
 
     let config_path = matches.value_of("config").unwrap_or("config.toml");
-    println!("Path of config: {}", config_path);
 
     let config = parse_config(config_path);
 
-    if config.type_of_db_.eq("kdbx") {
-        kdbx::run(config.path_to_kdbx_, config.kdbx_password_, config.script_dir_, config.blacklist_);
-    } else if config.type_of_db_.eq("pass") {
-        pass::run(config.script_dir_, config.blacklist_);
+    if config.profile_.type_.eq("kdbx") {
+        kdbx::run(&config);
+    } else if config.profile_.type_.eq("pass") {
+        pass::run(&config);
     }
 }
