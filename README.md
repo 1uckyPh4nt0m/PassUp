@@ -11,8 +11,7 @@ Automatically update passwords from common Password Managers. Supported Password
 
 ## Config file
 Allows you to choose between pass and the kdbx variant.
-### Example configurations:
-#### kdbx
+### Example configuration file:
 ```
 active_profile = "my-private-keepassx"
 
