@@ -5,7 +5,8 @@ use std::fs;
 
 use kpdb::EntryUuid;
 
-use crate::utils::{get_pw, cmd, Configuration, Source, DB, DBEntry, exec_script};
+use crate::utils::{get_pw, cmd, DB, DBEntry, exec_script};
+use crate::config::{Configuration, Source};
 
 
 pub fn run(config: &Configuration) { 
@@ -107,12 +108,15 @@ fn parse_pass(source: &Source) -> Option<DB> {
 }
 
 fn print_entry_on_error(db_entry: &DBEntry) {
-    println!("DB Update failed for entry: {}, {}, {}", db_entry.url_, db_entry.username_, db_entry.new_password_);
+    println!("Update failed for entry: {}, {}, {}", db_entry.url_, db_entry.username_, db_entry.new_password_);
 }
 
 fn update_pass_entry(db_entry: &DBEntry) -> Option<()> {
     let pass_entry = format!("{}/{}", db_entry.url_, db_entry.username_);
-    let output = cmd("pass", &["rm", &pass_entry]);
+    let output = match cmd("pass", &["rm", &pass_entry]) {
+        Some(output) => output,
+        None => return None
+    };
     if !output.status.success() {
         print_entry_on_error(&db_entry);
         return None;

@@ -15,6 +15,7 @@ clap = "2.33.3"
 toml = "0.5.8"
 rpassword = "5.0.1"
 url = "2.2.1"
+snafu = "0.6.10"
 [dependencies.passwords]
 version = "3.1.4"
 features = ["crypto"]

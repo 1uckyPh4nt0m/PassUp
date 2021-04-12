@@ -1,11 +1,12 @@
 mod pass;
 mod kdbx;
+mod config;
 mod utils;
 
+extern crate snafu;
 extern crate clap;
 use clap::{Arg, App};
-use utils::{parse_config};
-
+use config::{parse_config};
 
 fn main() {
     let matches = App::new("PassUp")
@@ -23,7 +24,13 @@ fn main() {
 
     let config_path = matches.value_of("config").unwrap_or("config.toml");
 
-    let config = parse_config(config_path);
+    let config = match parse_config(config_path) {
+        Ok(config) => config,
+        Err(err) => {
+            println!("{}", err);
+            return;
+        }
+    };
 
     if config.profile_.type_.eq("kdbx") {
         kdbx::run(&config);

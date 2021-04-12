@@ -1,17 +1,18 @@
 // usage:
-// nightwatch --env firefox lichess.js url userName oldPasswd newPasswd  
-// nightwatch --env firefox --test  lichess.js http://www.lichess.org bachelor1 password123 password456
+// nightwatch --env firefox --test lichess.js url userName oldPasswd newPasswd  
+// nightwatch --env firefox --test lichess.js http://www.lichess.org bachelor1 password123 password456
 module.exports = {
 'Demo test lichess.org' : function(browser) {
-	const url = process.argv[7];
-	const userName = process.argv[8];
-    const oldPasswd = process.argv[9];
-    const newPasswd = process.argv[10];
+	const url = process.argv[6];
+	const userName = process.argv[7];
+    const oldPasswd = process.argv[8];
+    const newPasswd = process.argv[9];
 
 	browser
 		.url(url)
       	.waitForElementVisible('body')
-		.click('a.signin.button')
+		.waitForElementVisible('a.signin')
+		.click('a.signin')
       	.setValue('#form3-username', userName)
       	.setValue('#form3-password', oldPasswd)
 		.assert.visible('button.submit.button')

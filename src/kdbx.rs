@@ -7,7 +7,8 @@ use rpassword::read_password;
 
 
 use kpdb::{CompositeKey, Database, Entry};
-use crate::utils::{Configuration, Source, DB, DBEntry, exec_script, get_pw};
+use crate::utils::{DB, DBEntry, exec_script, get_pw};
+use crate::config::{Configuration, Source};
 
 
 pub fn run(config: &Configuration) {
