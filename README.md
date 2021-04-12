@@ -14,18 +14,33 @@ Allows you to choose between pass and the kdbx variant.
 ### Example configurations:
 #### kdbx
 ```
-type_of_db = "kdbx"
-path_to_kdbx = "path_to_kdbx_file"
-kdbx_password = "password"
-script_dir = "path_to_script_directory"
-blacklist = ["url1", "url2", ...]
+active_profile = "my-private-keepassx"
+
+[profile.my-private-keepassx]
+type = "kdbx"
+sources = [ "private-kdbx" ]
+
+[profile.work-pass]
+type = "pass"
+
+[[sources]]
+name = "private-kdbx"
+file = "tests/resources/test_db.kdbx"
+blocklist = [ "google.com", "no-password-but-note" ]
+
+[[scripts]]
+dir = "./scripts"
+blocklist = [ "live.com.js" ]
+
+[urls]
+"([^/]{1,30}://)?[^/]+gmail.com(/$|/.*)" = "google.com.js"
+"skype.com/" = "live.com.js"
+"non-domain-name-in-DB-file" = ""
+
+[[scripts]]
+dir = "development/my-custom-PassUp-scripts"
 ```
-#### pass
-```
-type_of_db = "pass"
-script_dir = "path_to_script_directory"
-blacklist = ["url1", "url2", ...]
-```
+
 Store the config file as a *.toml* file.
 
 ## Program Arguments
