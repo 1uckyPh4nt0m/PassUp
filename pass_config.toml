@@ -6,7 +6,7 @@ sources = [ "private-kdbx" ]
 
 [profile.my-work-pass]
 type = "pass"
-sources = [ "work-kdbx" ]
+sources = [ "work-pass" ]
 
 [[sources]]
 name = "private-kdbx"
@@ -24,7 +24,3 @@ blocklist = [ "live.com.js" ]
 
 [[scripts]]
 dir = "development/my-custom-PassUp-scripts"
-
-[[sources]]
-name = "work-kdbx"
-blocklist = [ "google.com", "no-password-but-note" ]

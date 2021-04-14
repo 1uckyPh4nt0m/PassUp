@@ -47,12 +47,6 @@ impl Script {
     pub fn new(dir_: String, blocklist_: Vec<String>) -> Self { Self { dir_, blocklist_ } }
 }
 
-// mod activeProfileError {
-
-//         MissingField() {
-//             description("active_profile field missing in config file")
-//             display("active_profile field missing in config file")
-
 #[derive(Debug, Snafu)]
 pub enum Error {
     //*********************************************************************************
@@ -103,6 +97,7 @@ pub enum Error {
     SourcesNameMissing,
     #[snafu(display("Missing file field in sources"))]
     SourcesFileMissing,
+    SourcesIgnore,
     //*********************************************************************************
     //Scripts Errors
     #[snafu(display("Scripts missing in config file"))]
@@ -117,7 +112,7 @@ pub enum Error {
     }
 }
 
-type Result<T, E = Error> = std::result::Result<T, E>;
+type Result<T, E=Error> = std::result::Result<T, E>;
 
 pub fn parse_config(path: &str) -> Result<Configuration> {
     let config_r = fs::read(path).context(ConfigOpen { path })?;
@@ -133,7 +128,17 @@ pub fn parse_config(path: &str) -> Result<Configuration> {
     profile_v = profile_m.get(&active_profile).ok_or(Error::ProfileAPNotPresent { path:path.to_owned() })?;
     let profile = parse_profile(profile_v)?;
 
-    let sources_v = config.get("sources").ok_or(Error::SourcesNotFound { path:path.to_owned() })?;
+    let temp = Value::Array(vec![]);
+    let sources_v = match config.get("sources") {
+        Some(source) => source,
+        None => {
+            if profile.type_.eq("kdbx") {
+                return Err(Error::SourcesNotFound { path:path.to_owned() });
+            }
+            &temp
+        }
+    };
+    
     let sources_vec = sources_v.as_array().ok_or(Error::SourcesWrongFormat)?;
 
     let mut sources = Vec::new();
@@ -144,6 +149,7 @@ pub fn parse_config(path: &str) -> Result<Configuration> {
                     sources.push(source);
                 }
             }
+            Err(Error::SourcesIgnore) => continue,
             Err(err) => println!("{}", err)
         };
     }
@@ -158,7 +164,6 @@ pub fn parse_config(path: &str) -> Result<Configuration> {
             Err(err) => println!("{}", err)
         };
     }
-
 
     let urls_r = match config.get("urls") {
         Some(urls) => urls.as_table(),
@@ -199,6 +204,10 @@ fn parse_profile(profile: &Value) -> Result<Profile> {
 fn parse_source(source: &Value, profile: &Profile) -> Result<Source> {
     let name_v = source.get("name").ok_or(Error::SourcesNameMissing)?;
     let name = name_v.to_string().replace("\"", "");
+
+    if !profile.sources_.contains(&name) {
+        return Err(Error::SourcesIgnore);
+    }
 
     let file = match source.get("file") {
         Some(file) => file.to_string().replace("\"", ""),

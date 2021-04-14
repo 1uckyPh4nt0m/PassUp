@@ -7,7 +7,7 @@ use kpdb::EntryUuid;
 use passwords::PasswordGenerator;
 use std::path::PathBuf;
 use url::{Url};
-use crate::config::{Source, Script};
+use crate::config::{Script};
 
 pub struct DBEntry {
     pub url_: String,
@@ -20,7 +20,6 @@ pub struct DBEntry {
 impl DBEntry {
     pub fn new(url_: String, username_: String, old_password_: String, new_password_: String, uuid: EntryUuid) -> Self { Self { url_, username_, old_password_, new_password_, uuid } }
 }
-
 
 pub struct DB {
     pub entries: Vec<DBEntry>
@@ -58,7 +57,7 @@ pub fn exec_nightwatch(script_path: &str, db_entry: &DBEntry) -> Option<Output> 
     return output;
 }
 
-pub fn get_script_name_check_blocklist(url: &String, source: &Source) -> Option<String> {
+pub fn get_script_name_check_blocklist(url: &String, blocklist: &Vec<String>) -> Option<String> {
     let mut url_;
     if !url.contains("https://") {
         url_ = "https://".to_owned();
@@ -83,7 +82,7 @@ pub fn get_script_name_check_blocklist(url: &String, source: &Source) -> Option<
         }
     };
 
-    if source.blocklist_.contains(&target_domain.to_string()) {
+    if blocklist.contains(&target_domain.to_string()) {
         return None;
     }
 
@@ -92,11 +91,11 @@ pub fn get_script_name_check_blocklist(url: &String, source: &Source) -> Option<
     return Some(target_domain);
 }
 
-pub fn get_script_path(source: &Source, script: &Script, db_entry: &DBEntry) -> Option<String> {
+pub fn get_script_path(script: &Script, blocklist: &Vec<String>, db_entry: &DBEntry) -> Option<String> {
     let mut script_path = PathBuf::new();
     script_path.push(&script.dir_);
 
-    let script_name = match get_script_name_check_blocklist(&db_entry.url_, source) {
+    let script_name = match get_script_name_check_blocklist(&db_entry.url_, blocklist) {
         Some(target) => target,
         None => return None
     };
@@ -126,8 +125,8 @@ pub fn get_script_path(source: &Source, script: &Script, db_entry: &DBEntry) -> 
     return Some(script_path_string)
 }
 
-pub fn exec_script(source: &Source, script: &Script, db_entry: &DBEntry) -> Option<Output> {
-    let script_path = match get_script_path(source, script, &db_entry) {
+pub fn exec_script(script: &Script, blocklist: &Vec<String>, db_entry: &DBEntry) -> Option<Output> {
+    let script_path = match get_script_path(script, blocklist, &db_entry) {
         Some(path) => path,
         None => return None
     };

@@ -6,17 +6,22 @@ sources = [ "private-kdbx" ]
 
 [profile.work-pass]
 type = "pass"
+sources = [ "work-pass" ]   #optional
 
 [[sources]]
 name = "private-kdbx"
 file = "tests/resources/test_db.kdbx"
-blocklist = [ "google.com", "no-password-but-note" ]
+blocklist = [ "google.com", "no-password-but-note" ]    #optional
+
+[[sources]]
+name = "work-pass"
+blocklist = [ "google.com" ]    #optional
 
 [[scripts]]
 dir = "./scripts"
-blocklist = [ "live.com.js" ]
+blocklist = [ "live.com.js" ]   #optional
 
-[urls]
+[urls]  #optional
 "([^/]{1,30}://)?[^/]+gmail.com(/$|/.*)" = "google.com.js"
 "skype.com/" = "live.com.js"
 "non-domain-name-in-DB-file" = ""

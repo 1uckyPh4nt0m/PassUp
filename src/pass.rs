@@ -6,39 +6,41 @@ use std::fs;
 use kpdb::EntryUuid;
 
 use crate::utils::{get_pw, cmd, DB, DBEntry, exec_script};
-use crate::config::{Configuration, Source};
+use crate::config::{Configuration};
 
 
 pub fn run(config: &Configuration) { 
-    for source in &config.sources_ {
-        let db = match parse_pass(source) {
-            Some(result) => result,
-            None => {
-                eprintln!("Parsing failed for {}!", source.name_);
-                continue;
-            }
-        };
-        
-        for db_entry in db.entries {
-            for script in &config.scripts_ {
-                let output = match exec_script(source, script, &db_entry) {
-                    Some(output) => output,
-                    None => continue
-                };
-        
-                if output.status.success() {
-                    update_pass_entry(&db_entry);
-                } else {
-                    println!("Could not update password!");
-                    println!("{}\n{}\n{}", output.status, str::from_utf8(&output.stdout).unwrap_or("error"), str::from_utf8(&output.stderr).unwrap_or("error"));
-                }
+    let db = match parse_pass() {
+        Some(result) => result,
+        None => {
+            eprintln!("Parsing failed!");
+            return;
+        }
+    };
+    
+    let mut blocklist = Vec::new();
+    if !config.sources_.is_empty() {
+        blocklist = config.sources_[0].blocklist_.clone();
+    }
+    for db_entry in db.entries {
+        for script in &config.scripts_ {
+            let output = match exec_script(script, &blocklist, &db_entry) {
+                Some(output) => output,
+                None => continue
+            };
+    
+            if output.status.success() {
+                update_pass_entry(&db_entry);
+            } else {
+                println!("Could not update password!");
+                println!("{}\n{}\n{}", output.status, str::from_utf8(&output.stdout).unwrap_or("error"), str::from_utf8(&output.stderr).unwrap_or("error"));
             }
         }
     }
 }
 
 
-fn parse_pass(source: &Source) -> Option<DB> {
+fn parse_pass() -> Option<DB> {
     let mut path = PathBuf::new();
     let home_dir = match dirs::home_dir() {
         Some(dir) => dir,
@@ -56,11 +58,11 @@ fn parse_pass(source: &Source) -> Option<DB> {
     for subdir_r in outer_dir {
         let subdir_os = match subdir_r {
             Ok(subdir_os) => subdir_os.file_name(),
-            Err(_) => return None,
+            Err(_) => continue,
         };
         let url = match subdir_os.to_str() {
             Some(dir) => dir.to_owned(),
-            None => return None
+            None => continue
         };
         if url.starts_with(".") {
             continue;
@@ -71,16 +73,16 @@ fn parse_pass(source: &Source) -> Option<DB> {
         path.push(&url);
         let inner_dir = match fs::read_dir(&path) {
             Ok(dir) => dir,
-            Err(_) => return None
+            Err(_) => continue
         };
         for dir_entry in inner_dir {
             let name = match dir_entry {
                 Ok(name) => name.file_name(),
-                Err(_) => return None,
+                Err(_) => continue,
             };
             let username = match name.to_str() {
                 Some(username) => username.to_string().replace(".gpg", ""),
-                None => return None
+                None => continue
             };
             if username.eq("") {
                 continue;
@@ -92,15 +94,17 @@ fn parse_pass(source: &Source) -> Option<DB> {
                 Err(_) => continue
             };
             if !child.status.success() {
-                return None;
+                continue;
             }
 
             let password = match str::from_utf8(&child.stdout) {
                 Ok(pass) => pass.replace("\n", ""),
-                Err(_) => return None
+                Err(_) => continue
             };
             
-            let entry = DBEntry::new(url.clone(), username, password, get_pw(), EntryUuid::nil());
+            let mut url_ = "https://".to_owned();
+            url_.push_str(&url);
+            let entry = DBEntry::new(url_.clone(), username, password, get_pw(), EntryUuid::nil());
             db.push(entry);
         }
     }
@@ -112,7 +116,8 @@ fn print_entry_on_error(db_entry: &DBEntry) {
 }
 
 fn update_pass_entry(db_entry: &DBEntry) -> Option<()> {
-    let pass_entry = format!("{}/{}", db_entry.url_, db_entry.username_);
+    let url = db_entry.url_.clone().replace("https://", "");
+    let pass_entry = format!("{}/{}", url, db_entry.username_);
     let output = match cmd("pass", &["rm", &pass_entry]) {
         Some(output) => output,
         None => return None

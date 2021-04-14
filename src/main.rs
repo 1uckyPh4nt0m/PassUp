@@ -27,7 +27,7 @@ fn main() {
     let config = match parse_config(config_path) {
         Ok(config) => config,
         Err(err) => {
-            println!("{}", err);
+            eprintln!("{}", err);
             return;
         }
     };
