@@ -16,6 +16,7 @@ npm install -g nightwatch
 ```
 
 Install Browser and WebDriver:
+
 Either install Firefox or Chrome.
 - Firefox(https://www.mozilla.org/de/firefox/new/)
 - Geckodriver
@@ -43,7 +44,9 @@ cargo run -- [Program arguments]
 
 ## Program Arguments
 -c, --config <FILE>     Where <FILE> points to the toml configuration file.
+
 -h, --help              Prints help information
+
 -V, --version           Prints version information
 
 ## Configuration file
