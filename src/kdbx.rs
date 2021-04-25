@@ -45,7 +45,7 @@ pub fn run(config: &Configuration) {
 
         for db_entry in db.entries {
             for script in &config.scripts_ {
-                let output = match exec_script(script, &source.blocklist_, &db_entry) {
+                let output = match exec_script(script, &source.blocklist_, &db_entry, &config.browser_type_) {
                     Some(output) => output,
                     None => continue,
                 };
@@ -128,7 +128,7 @@ fn update_db(source: &Source, db_: &Database) -> Result<()> {
     let mut file = fs::File::create(&source.file_).context(IoError).context(err.clone())?;
     (&mut db).save(&mut file).context(KpdbError).context(err)?;
 
-    println!("Updated {}!", &source.file_);
+    println!("Finished with {}!", &source.file_);
     Ok(())
 }
 

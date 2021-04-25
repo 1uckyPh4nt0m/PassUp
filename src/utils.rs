@@ -8,6 +8,7 @@ use passwords::PasswordGenerator;
 use std::path::PathBuf;
 use url::{Url};
 use crate::config::{Script};
+use std::io;
 
 pub struct DBEntry {
     pub url_: String,
@@ -43,15 +44,15 @@ pub fn get_pw() -> String {
     return pg.generate_one().unwrap();
 }
 
-pub fn cmd(program: &str, args: &[&str]) -> Option<Output> {
+pub fn cmd(program: &str, args: &[&str]) -> io::Result<Output> {
     return Command::new(program)
         .args(args)
-        .output().ok();
+        .output();
 }
 
-pub fn exec_nightwatch(script_path: &str, db_entry: &DBEntry) -> Option<Output> {
+pub fn exec_nightwatch(script_path: &str, db_entry: &DBEntry, browser_type: &String) -> io::Result<Output> {
     let output = cmd("nightwatch", 
-            &["--env", "firefox", "--test", script_path, 
+            &["--env", browser_type, "--test", script_path, 
             &db_entry.url_, &db_entry.username_, &db_entry.old_password_, &db_entry.new_password_]);
     
     return output;
@@ -107,8 +108,7 @@ pub fn get_script_path(script: &Script, blocklist: &Vec<String>, db_entry: &DBEn
         return None;
     }
 
-    let entry_is_file = script_path.is_file();
-    if entry_is_file == false {
+    if !script_path.exists() {
         eprintln!("Script {} not present!", script_path.to_str().unwrap());
         return None;
     }
@@ -125,11 +125,17 @@ pub fn get_script_path(script: &Script, blocklist: &Vec<String>, db_entry: &DBEn
     return Some(script_path_string)
 }
 
-pub fn exec_script(script: &Script, blocklist: &Vec<String>, db_entry: &DBEntry) -> Option<Output> {
+pub fn exec_script(script: &Script, blocklist: &Vec<String>, db_entry: &DBEntry, browser_type: &String) -> Option<Output> {
     let script_path = match get_script_path(script, blocklist, &db_entry) {
         Some(path) => path,
         None => return None
     };
 
-    return exec_nightwatch(&script_path, &db_entry);
+    match exec_nightwatch(&script_path, &db_entry, browser_type) {
+        Ok(output) => return Some(output),
+        Err(err) => {
+            eprintln!("Error while executing Nightwatch: {}", err);
+            return None;
+        }
+    };
 }

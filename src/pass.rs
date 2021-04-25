@@ -24,7 +24,7 @@ pub fn run(config: &Configuration) {
     }
     for db_entry in db.entries {
         for script in &config.scripts_ {
-            let output = match exec_script(script, &blocklist, &db_entry) {
+            let output = match exec_script(script, &blocklist, &db_entry, &config.browser_type_) {
                 Some(output) => output,
                 None => continue
             };
@@ -119,8 +119,8 @@ fn update_pass_entry(db_entry: &DBEntry) -> Option<()> {
     let url = db_entry.url_.clone().replace("https://", "");
     let pass_entry = format!("{}/{}", url, db_entry.username_);
     let output = match cmd("pass", &["rm", &pass_entry]) {
-        Some(output) => output,
-        None => return None
+        Ok(output) => output,
+        Err(_) => return None
     };
     if !output.status.success() {
         print_entry_on_error(&db_entry);

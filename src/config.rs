@@ -4,7 +4,9 @@ use std::collections::HashMap;
 
 use snafu::{ResultExt, Snafu};
 
+#[derive(Debug)]
 pub struct Configuration {
+    pub browser_type_: String,
     pub active_profile_: String,
     pub profile_: Profile,
     pub sources_: Vec<Source>,
@@ -13,10 +15,11 @@ pub struct Configuration {
 }
 
 impl Configuration {
-    pub fn new(active_profile_: String, profile_: Profile, sources_: Vec<Source>, scripts_: Vec<Script>, urls_: HashMap<String, String>) -> Self { Self { active_profile_, profile_, sources_, scripts_, urls_ } }
+    pub fn new(active_profile_: String, profile_: Profile, sources_: Vec<Source>, scripts_: Vec<Script>, urls_: HashMap<String, String>, browser_type_: String) -> Self { Self { active_profile_, profile_, sources_, scripts_, urls_, browser_type_ } }
 }
 
 
+#[derive(Debug)]
 pub struct Profile {
     pub type_: String,
     pub sources_: Vec<String>
@@ -27,6 +30,7 @@ impl Profile {
 }
 
 
+#[derive(Debug)]
 pub struct Source {
     pub name_: String,
     pub file_: String,
@@ -38,6 +42,7 @@ impl Source {
 }
 
 
+#[derive(Debug)]
 pub struct Script {
     pub dir_: String,
     pub blocklist_: Vec<String>
@@ -61,6 +66,8 @@ pub enum Error {
         path: String,
         source: toml::de::Error
     },
+    #[snafu(display("Wrong browser type set in config file"))]
+    ConfigBrowserTypeWrong,
     //*********************************************************************************
     //Active Profile Errors
     #[snafu(display("Active profile field missing in config file {}", path))]
@@ -120,6 +127,15 @@ pub fn parse_config(path: &str) -> Result<Configuration> {
 
     let config: Value = toml::from_str(&config_str).context(ConfigWrongFormat { path })?;
 
+    let browser_type = config.get("browser_type")
+                                    .ok_or(Error::ConfigBrowserTypeWrong)?.as_str()
+                                    .ok_or(Error::ConfigBrowserTypeWrong)?.to_owned()
+                                    .to_ascii_lowercase();
+
+    if !browser_type.eq("firefox") && !browser_type.eq("chrome") {
+        return Err(Error::ConfigBrowserTypeWrong);
+    }
+
     let active_profile_v = config.get("active_profile").ok_or(Error::ActiveProfileMissingField { path:path.to_owned() })?;
     let active_profile = active_profile_v.to_string().replace("\"", "");
 
@@ -150,7 +166,7 @@ pub fn parse_config(path: &str) -> Result<Configuration> {
                 }
             }
             Err(Error::SourcesIgnore) => continue,
-            Err(err) => println!("{}", err)
+            Err(err) => eprintln!("{}", err)
         };
     }
 
@@ -161,7 +177,7 @@ pub fn parse_config(path: &str) -> Result<Configuration> {
     for script in scripts_vec {
         match parse_script(script) {
             Ok(script) => scripts.push(script),
-            Err(err) => println!("{}", err)
+            Err(err) => eprintln!("{}", err)
         };
     }
 
@@ -179,7 +195,7 @@ pub fn parse_config(path: &str) -> Result<Configuration> {
         urls.insert(k.to_string(), e.to_string().replace("\"", ""));
     }
 
-    return Ok(Configuration::new(active_profile, profile, sources, scripts, urls));
+    return Ok(Configuration::new(active_profile, profile, sources, scripts, urls, browser_type));
 }
 
 fn parse_profile(profile: &Value) -> Result<Profile> {
