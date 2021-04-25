@@ -2,7 +2,7 @@ extern crate kpdb;
 extern crate rpassword;
 
 use rpassword::read_password;
-use std::fs::File;
+use std::fs;
 use std::str;
 
 use crate::config::{Configuration, Source};
@@ -18,6 +18,8 @@ enum OtherError {
 
 #[derive(Debug, Snafu)]
 enum Error {
+    #[snafu(display("DB was not found on the system at location: {}", file))]
+    DBNotPresent { file: String },
     #[snafu(display("No url was found for an entry"))]
     UrlMissing,
     #[snafu(display("Credentials are incomplete for site {}", url))]
@@ -123,7 +125,7 @@ fn update_db(source: &Source, db_: &Database) -> Result<()> {
         file: source.file_.to_owned(),
     };
     std::fs::remove_file(&source.file_).context(IoError).context(err.clone())?;
-    let mut file = File::create(&source.file_).context(IoError).context(err.clone())?;
+    let mut file = fs::File::create(&source.file_).context(IoError).context(err.clone())?;
     (&mut db).save(&mut file).context(KpdbError).context(err)?;
 
     println!("Updated {}!", &source.file_);
@@ -136,11 +138,17 @@ fn unlock_db(source: &Source) -> Result<Database> {
     let mut db_password;
     let mut password_wrong = true;
 
+    
+    match fs::metadata(&source.file_) {
+        Ok(_) => (),
+        Err(_) => return Err(Error::DBNotPresent { file: source.file_.to_owned() })
+    }
+
     println!("Please enter password for {} at {}", source.name_, source.file_);
     while password_wrong {
         db_password = read_password().unwrap_or("".to_owned());
         let key = CompositeKey::from_password(&db_password);
-        let mut file = File::open(&source.file_).context(IoError).context(OpenFailed { file: source.file_.to_owned() })?;
+        let mut file = fs::File::open(&source.file_).context(IoError).context(OpenFailed { file: source.file_.to_owned() })?;
 
         db = match Database::open(&mut file, &key) {
             Ok(db) => {

@@ -8,6 +8,21 @@ Automatically update passwords from common Password Managers. Supported Password
 
 ## Getting Started
 ### Prerequisites
+Install Rust(https://www.rust-lang.org/tools/install):
+```
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+```
+Compile the package and all the dependencies:
+```
+cargo build
+```
+Run the program:
+```
+cargo run -- -c path_to_config_file+
+```
+
+## Program Arguments
+The program takes one argument which is the path to the config file.
 
 ## Config file
 Allows you to choose between pass and the kdbx variant.
@@ -46,6 +61,3 @@ dir = "development/my-custom-PassUp-scripts"
 ```
 
 Store the config file as a *.toml* file.
-
-## Program Arguments
-The program takes one argument which is the path to the config file.
