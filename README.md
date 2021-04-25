@@ -8,6 +8,26 @@ Automatically update passwords from common Password Managers. Supported Password
 
 ## Getting Started
 ### Prerequisites
+Install Node.js. Please refer to https://nodejs.org/en/download/ for more information.
+
+Install Nightwatch(https://nightwatchjs.org/gettingstarted/installation/):
+```
+npm install -g nightwatch
+```
+
+Install Browser and WebDriver:
+Either install Firefox or Chrome.
+- Firefox(https://www.mozilla.org/de/firefox/new/)
+- Geckodriver
+```
+npm install geckodriver --save-dev
+```
+- Chrome(https://support.google.com/chrome/answer/95346?co=GENIE.Platform%3DDesktop&hl=de)
+- Chromedriver
+```
+npm install chromedriver --save-dev
+```
+
 Install Rust(https://www.rust-lang.org/tools/install):
 ```
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
@@ -18,17 +38,20 @@ cargo build
 ```
 Run the program:
 ```
-cargo run -- -c path_to_config_file+
+cargo run -- [Program arguments]
 ```
 
 ## Program Arguments
-The program takes one argument which is the path to the config file.
+-c, --config <FILE>     Where <FILE> points to the toml configuration file.
+-h, --help              Prints help information
+-V, --version           Prints version information
 
-## Config file
-Allows you to choose between pass and the kdbx variant.
+## Configuration file
+Allows you to choose between the browser to be used, the pass and kdbx variant.
 ### Example configuration file:
 ```
 active_profile = "my-private-keepassx"
+browser_type = "firefox"    #browser_type = "chrome"
 
 [profile.my-private-keepassx]
 type = "kdbx"
