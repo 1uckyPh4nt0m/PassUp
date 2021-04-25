@@ -46,11 +46,11 @@ Run the program:
 cargo run -- [Program arguments]
 ```
 ### Program Arguments
--c, --config <FILE>     Where <FILE> points to the toml configuration file.
+-c, --config \<FILE\> | Where \<FILE\> points to the toml configuration file.
 
--h, --help              Prints help information
+-h, --help | Prints help information
 
--V, --version           Prints version information
+-V, --version | Prints version information
 
 ### Configuration file
 Allows you to choose between the browser to be used, the pass and kdbx variant.
