@@ -34,15 +34,17 @@ Automatically update passwords from common Password Managers. Supported Password
     ```
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
     ```
-    Compile the package and all the dependencies:
-    ```
-    cargo build
-    ```
-    Run the program:
-    ```
-    cargo run -- [Program arguments]
-    ```
 
+### Program Usage
+## Compile and Run
+Compile the package and all the dependencies:
+```
+cargo build
+```
+Run the program:
+```
+cargo run -- [Program arguments]
+```
 ## Program Arguments
 -c, --config <FILE>     Where <FILE> points to the toml configuration file.
 
@@ -53,7 +55,7 @@ Automatically update passwords from common Password Managers. Supported Password
 ## Configuration file
 Allows you to choose between the browser to be used, the pass and kdbx variant.
 ### Example configuration file:
-The configuration file is written in the [TOML](https://toml.io/en/) format.
+The configuration file has to be written in the [TOML](https://toml.io/en/) format.
 
 ```toml
 active_profile = "my-private-keepassx"
