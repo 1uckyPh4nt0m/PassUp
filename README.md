@@ -8,15 +8,14 @@ Automatically update passwords from common Password Managers. Supported Password
 
 ## Getting Started
 ### Prerequisites
-Install Node.js. Please refer to https://nodejs.org/en/download/ for more information.
+1. Install Node.js. Please refer to https://nodejs.org/en/download/ for more information.
 
-Install [Nightwatch](https://nightwatchjs.org/gettingstarted/installation/):
-```
-npm install -g nightwatch
-```
+2. Install [Nightwatch](https://nightwatchjs.org/gettingstarted/installation/):
+    ```
+    npm install -g nightwatch
+    ```
 
-Install Browser and WebDriver:
-
+3. Install Browser and WebDriver:
     Either install Firefox or Chrome.
     
     - [Firefox](https://www.mozilla.org/de/firefox/new/)
@@ -30,18 +29,18 @@ Install Browser and WebDriver:
         npm install chromedriver --save-dev
         ```
 
-Install [Rust](https://www.rust-lang.org/tools/install):
-```
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-```
-Compile the package and all the dependencies:
-```
-cargo build
-```
-Run the program:
-```
-cargo run -- [Program arguments]
-```
+4. Install [Rust](https://www.rust-lang.org/tools/install):
+    ```
+    curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+    ```
+    Compile the package and all the dependencies:
+    ```
+    cargo build
+    ```
+    Run the program:
+    ```
+    cargo run -- [Program arguments]
+    ```
 
 ## Program Arguments
 -c, --config <FILE>     Where <FILE> points to the toml configuration file.
