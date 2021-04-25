@@ -1,10 +1,10 @@
 # PassUp
 
 Automatically update passwords from common Password Managers. Supported Password Managers are:
-- pass
-- KeePass(kdbx)
-- KeePassX(kdbx)
-- KeePassXC(kdbx)
+- [pass](https://www.passwordstore.org/)
+- [KeePass](https://keepass.info/)(kdbx)
+- [KeePassX](https://www.keepassx.org/)(kdbx)
+- [KeePassXC](https://keepassxc.org/)(kdbx)
 
 ## Getting Started
 ### Prerequisites
@@ -16,15 +16,16 @@ Automatically update passwords from common Password Managers. Supported Password
     ```
 
 3. Install Browser and WebDriver:
+
     Either install Firefox or Chrome.
-    
+
     - [Firefox](https://www.mozilla.org/de/firefox/new/)
-        - Geckodriver
+        - [Geckodriver](https://github.com/mozilla/geckodriver/releases)
         ```
         npm install geckodriver --save-dev
         ```
     - [Chrome](https://support.google.com/chrome/answer/95346?co=GENIE.Platform%3DDesktop&hl=de)
-        - Chromedriver
+        - [Chromedriver](https://sites.google.com/chromium.org/driver/)
         ```
         npm install chromedriver --save-dev
         ```
@@ -52,6 +53,8 @@ Automatically update passwords from common Password Managers. Supported Password
 ## Configuration file
 Allows you to choose between the browser to be used, the pass and kdbx variant.
 ### Example configuration file:
+The configuration file is written in the [TOML](https://toml.io/en/) format.
+
 ```toml
 active_profile = "my-private-keepassx"
 browser_type = "firefox"    #browser_type = "chrome"
