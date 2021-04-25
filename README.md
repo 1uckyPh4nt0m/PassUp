@@ -46,6 +46,7 @@ Run the program:
 cargo run -- [Program arguments]
 ```
 ### Program Arguments
+------------ | -------------
 -c, --config \<FILE\> | Where \<FILE\> points to the toml configuration file.
 -h, --help | Prints help information
 -V, --version | Prints version information
