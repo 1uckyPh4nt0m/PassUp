@@ -17,17 +17,18 @@ npm install -g nightwatch
 
 Install Browser and WebDriver:
 
-Either install Firefox or Chrome.
-- [Firefox](https://www.mozilla.org/de/firefox/new/)
-    - Geckodriver
-    ```
-    npm install geckodriver --save-dev
-    ```
-- [Chrome](https://support.google.com/chrome/answer/95346?co=GENIE.Platform%3DDesktop&hl=de)
-    - Chromedriver
-    ```
-    npm install chromedriver --save-dev
-    ```
+    Either install Firefox or Chrome.
+    
+    - [Firefox](https://www.mozilla.org/de/firefox/new/)
+        - Geckodriver
+        ```
+        npm install geckodriver --save-dev
+        ```
+    - [Chrome](https://support.google.com/chrome/answer/95346?co=GENIE.Platform%3DDesktop&hl=de)
+        - Chromedriver
+        ```
+        npm install chromedriver --save-dev
+        ```
 
 Install [Rust](https://www.rust-lang.org/tools/install):
 ```
