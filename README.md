@@ -10,7 +10,7 @@ Automatically update passwords from common Password Managers. Supported Password
 ### Prerequisites
 Install Node.js. Please refer to https://nodejs.org/en/download/ for more information.
 
-Install Nightwatch(https://nightwatchjs.org/gettingstarted/installation/):
+Install [Nightwatch](https://nightwatchjs.org/gettingstarted/installation/):
 ```
 npm install -g nightwatch
 ```
@@ -18,18 +18,18 @@ npm install -g nightwatch
 Install Browser and WebDriver:
 
 Either install Firefox or Chrome.
-- Firefox(https://www.mozilla.org/de/firefox/new/)
-- Geckodriver
-```
-npm install geckodriver --save-dev
-```
-- Chrome(https://support.google.com/chrome/answer/95346?co=GENIE.Platform%3DDesktop&hl=de)
-- Chromedriver
-```
-npm install chromedriver --save-dev
-```
+- [Firefox](https://www.mozilla.org/de/firefox/new/)
+    - Geckodriver
+    ```
+    npm install geckodriver --save-dev
+    ```
+- [Chrome](https://support.google.com/chrome/answer/95346?co=GENIE.Platform%3DDesktop&hl=de)
+    - Chromedriver
+    ```
+    npm install chromedriver --save-dev
+    ```
 
-Install Rust(https://www.rust-lang.org/tools/install):
+Install [Rust](https://www.rust-lang.org/tools/install):
 ```
 curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 ```
@@ -52,7 +52,7 @@ cargo run -- [Program arguments]
 ## Configuration file
 Allows you to choose between the browser to be used, the pass and kdbx variant.
 ### Example configuration file:
-```
++++
 active_profile = "my-private-keepassx"
 browser_type = "firefox"    #browser_type = "chrome"
 
@@ -84,6 +84,6 @@ blocklist = [ "live.com.js" ]   #optional
 
 [[scripts]]
 dir = "development/my-custom-PassUp-scripts"
-```
++++
 
 Store the config file as a *.toml* file.
