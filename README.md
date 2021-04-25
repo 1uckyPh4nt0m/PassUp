@@ -52,7 +52,7 @@ cargo run -- [Program arguments]
 ## Configuration file
 Allows you to choose between the browser to be used, the pass and kdbx variant.
 ### Example configuration file:
-+++
+```toml
 active_profile = "my-private-keepassx"
 browser_type = "firefox"    #browser_type = "chrome"
 
@@ -84,6 +84,6 @@ blocklist = [ "live.com.js" ]   #optional
 
 [[scripts]]
 dir = "development/my-custom-PassUp-scripts"
-+++
+```
 
 Store the config file as a *.toml* file.
