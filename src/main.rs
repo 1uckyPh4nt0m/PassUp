@@ -11,6 +11,11 @@ use clap::{Arg, App};
 use config::{parse_config};
 use which::which;
 
+//TODO: Errors für pass und utils anlegen
+//TODO: Updateprozess beschleunigen via Multithreading
+//TODO: [urls] funktionalität hinzufügen
+//TODO: Beispiel Nightwatch scripts erstellen
+
 fn main() {
     let matches = App::new("PassUp")
                             .version("0.1")
@@ -30,7 +35,7 @@ fn main() {
     let config = match parse_config(config_path) {
         Ok(config) => config,
         Err(err) => {
-            eprintln!("{}", err);
+            eprintln!("Error: {}", err);
             return;
         }
     };

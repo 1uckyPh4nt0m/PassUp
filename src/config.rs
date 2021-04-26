@@ -113,7 +113,7 @@ pub enum Error {
     ScriptsWrongFormat,
     #[snafu(display("Missing dir field in scripts"))]
     ScriptsDirMissing,
-    #[snafu(display("Error script dir {} not present on system!", dir))]
+    #[snafu(display("Script dir {} not present on system!", dir))]
     ScriptsDirNotPresent {
         dir: String
     }
@@ -166,7 +166,7 @@ pub fn parse_config(path: &str) -> Result<Configuration> {
                 }
             }
             Err(Error::SourcesIgnore) => continue,
-            Err(err) => eprintln!("{}", err)
+            Err(err) => eprintln!("Warning: {}", err)
         };
     }
 
@@ -177,7 +177,7 @@ pub fn parse_config(path: &str) -> Result<Configuration> {
     for script in scripts_vec {
         match parse_script(script) {
             Ok(script) => scripts.push(script),
-            Err(err) => eprintln!("{}", err)
+            Err(err) => eprintln!("Warning: {}", err)
         };
     }
 

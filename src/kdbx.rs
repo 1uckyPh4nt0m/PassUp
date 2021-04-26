@@ -26,7 +26,7 @@ enum Error {
     CredentialMissing { url: String },
     #[snafu(display("Could not update {} with error {}", file, source))]
     DbUpdateFailed { file: String, source: OtherError },
-    #[snafu(display("Error while opening DB file {}: {}", file, source))]
+    #[snafu(display("Could not open DB file {}: {}", file, source))]
     OpenFailed { file: String, source: OtherError },
 }
 
@@ -37,7 +37,7 @@ pub fn run(config: &Configuration) {
         let mut kpdb_db = match unlock_db(source) {
             Ok(db) => db,
             Err(err) => {
-                eprintln!("{}", err);
+                eprintln!("Error: {}", err);
                 continue;
             }
         };
@@ -58,7 +58,7 @@ pub fn run(config: &Configuration) {
                     (&mut kpdb_db).root_group.remove_entry(db_entry.uuid);
                     (&mut kpdb_db).root_group.add_entry(new_entry);
                 } else {
-                    eprintln!("Could not update password for site: {} and username: {}", db_entry.url_, db_entry.username_);
+                    eprintln!("Warning: Could not update password for site: {} and username: {}", db_entry.url_, db_entry.username_);
                     eprintln!("{}\n{}\n{}", output.status, str::from_utf8(&output.stdout).unwrap_or("error"), str::from_utf8(&output.stderr).unwrap_or("error"));
                     continue;
                 }
@@ -67,7 +67,7 @@ pub fn run(config: &Configuration) {
         match update_db(source, &kpdb_db) {
             Ok(_) => (),
             Err(err) => {
-                eprintln!("{}", err);
+                eprintln!("Error: {}", err);
                 print_db_content(&kpdb_db);
             }
         };
@@ -96,7 +96,7 @@ fn parse_kdbx_db(db: &Database) -> DB {
         let mut db_entry = match parse_db_entry(entry) {
             Ok(entry) => entry,
             Err(err) => {
-                eprintln!("{}", err);
+                eprintln!("Warning: {}", err);
                 continue;
             }
         };
