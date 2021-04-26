@@ -10,6 +10,7 @@ use url::{Url};
 use crate::config::{Script};
 use std::io;
 
+#[derive(Clone)]
 pub struct DBEntry {
     pub url_: String,
     pub username_: String,
@@ -123,19 +124,4 @@ pub fn get_script_path(script: &Script, blocklist: &Vec<String>, db_entry: &DBEn
     }
 
     return Some(script_path_string)
-}
-
-pub fn exec_script(script: &Script, blocklist: &Vec<String>, db_entry: &DBEntry, browser_type: &String) -> Option<Output> {
-    let script_path = match get_script_path(script, blocklist, &db_entry) {
-        Some(path) => path,
-        None => return None
-    };
-
-    match exec_nightwatch(&script_path, &db_entry, browser_type) {
-        Ok(output) => return Some(output),
-        Err(err) => {
-            eprintln!("Error while executing Nightwatch: {}", err);
-            return None;
-        }
-    };
 }

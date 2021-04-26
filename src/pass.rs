@@ -5,7 +5,7 @@ use std::fs;
 
 use kpdb::EntryUuid;
 
-use crate::utils::{get_pw, cmd, DB, DBEntry, exec_script};
+use crate::utils::{get_pw, cmd, DB, DBEntry, exec_nightwatch, get_script_path};
 use crate::config::{Configuration};
 
 
@@ -24,9 +24,17 @@ pub fn run(config: &Configuration) {
     }
     for db_entry in db.entries {
         for script in &config.scripts_ {
-            let output = match exec_script(script, &blocklist, &db_entry, &config.browser_type_) {
-                Some(output) => output,
+            let script_path = match get_script_path(script, &blocklist, &db_entry) {
+                Some(path) => path,
                 None => continue
+            };
+
+            let output = match exec_nightwatch(&script_path, &db_entry, &config.browser_type_) {
+                Ok(output) => output,
+                Err(err) => {
+                    eprintln!("Error while executing Nightwatch: {}", err);
+                    continue;
+                }
             };
     
             if output.status.success() {
