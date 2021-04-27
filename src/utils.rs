@@ -9,6 +9,8 @@ use std::path::PathBuf;
 use url::{Url};
 use crate::config::{Script};
 use std::io;
+use snafu::{ResultExt, Snafu};
+
 
 pub struct DBEntry {
     pub url_: String,
@@ -30,8 +32,37 @@ impl DB {
     pub fn new(entries: Vec<DBEntry>) -> Self { Self { entries } }
 }
 
-pub fn get_pw() -> String {
-    let pg = PasswordGenerator {
+#[derive(Debug, Snafu)]
+pub enum LibraryError {
+    UrlError { source: url::ParseError },
+    IoError { source: io::Error }
+}
+
+#[derive(Debug, Snafu)]
+pub enum Error {
+    #[snafu(display("A new password could not be generated: C{}", err))]
+    PasswordGeneratorError { err: &'static str },
+    #[snafu(display("Could not execute command {}{}: {}", program, args, source))]
+    CmdError { program: &'static str, args: String, source: LibraryError },
+    #[snafu(display("Could not parse URL {} with error {}", url, source))]
+    UrlParseError { url: String, source: LibraryError },
+    #[snafu(display("URL does not contain a domain name: {}", url))]
+    UrlDomainError { url: String },
+    UrlBlocked,
+    #[snafu(display("Script path does not result in a valid unicode string. Skipping site: {}", url))]
+    ScriptPathError { url: String },
+    #[snafu(display("Script path {} is not present", path))]
+    ScriptMissingError { path: String },
+    ScriptBlocked,
+    #[snafu(display("Error while executing Nightwatch: {}", source))]
+    NightwatchExecError { source: LibraryError }
+}
+
+type Result<T, E=Error> = std::result::Result<T, E>;
+
+//TODO let user select parameters
+pub fn get_pw() -> Result<String> {
+    let pass_gen = PasswordGenerator {
         length: 15,
         numbers: true,
         lowercase_letters: true,
@@ -41,22 +72,30 @@ pub fn get_pw() -> String {
         exclude_similar_characters: true,
         spaces: false,
     };
-    return pg.generate_one().unwrap();
+    match pass_gen.generate_one() {
+        Ok(pw) => return Ok(pw),
+        Err(err) => return Err(Error::PasswordGeneratorError { err })
+    };
 }
 
-pub fn cmd(program: &str, args: &[&str]) -> io::Result<Output> {
+pub fn cmd(program: &'static str, args: &[&str]) -> Result<Output> {
+    let args_v = args.to_owned();
+    let mut args_s = String::new();
+    for arg in args_v {
+        args_s.push_str(&format!(" {}", arg));
+    }
     return Command::new(program)
         .args(args)
-        .output();
+        .output().context(IoError).context(CmdError {program, args:args_s});
 }
 
-pub fn exec_nightwatch(script_path: &str, db_entry: &DBEntry, browser_type: &String) -> io::Result<Output> {
-    let output = cmd("nightwatch", 
+pub fn exec_nightwatch(script_path: &str, db_entry: &DBEntry, browser_type: &String) -> Result<Output> {
+    return cmd("nightwatch", 
             &["--env", browser_type, "--test", script_path, 
             &db_entry.url_, &db_entry.username_, &db_entry.old_password_, &db_entry.new_password_]);
-    
-    return output;
 }
+
+//TODO work from here
 
 pub fn get_script_name_check_blocklist(url: &String, blocklist: &Vec<String>) -> Option<String> {
     let mut url_;
@@ -115,7 +154,7 @@ pub fn get_script_path(script: &Script, blocklist: &Vec<String>, db_entry: &DBEn
 
     let script_path_string = match script_path.to_str() {
         Some(path) => path.to_owned(),
-        None => return None
+        None => return ScriptPathError
     };
 
     if script.blocklist_.contains(&script_path_string) {

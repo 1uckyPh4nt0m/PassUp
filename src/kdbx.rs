@@ -11,7 +11,7 @@ use kpdb::{CompositeKey, Database, Entry};
 use snafu::{ResultExt, Snafu};
 
 #[derive(Debug, Snafu)]
-enum OtherError {
+enum LibraryError {
     IoError { source: std::io::Error },
     KpdbError { source: kpdb::Error },
 }
@@ -25,9 +25,9 @@ enum Error {
     #[snafu(display("Credentials are incomplete for site {}", url))]
     CredentialMissing { url: String },
     #[snafu(display("Could not update {} with error {}", file, source))]
-    DbUpdateFailed { file: String, source: OtherError },
+    DbUpdateFailed { file: String, source: LibraryError },
     #[snafu(display("Could not open DB file {}: {}", file, source))]
-    OpenFailed { file: String, source: OtherError },
+    OpenFailed { file: String, source: LibraryError },
 }
 
 type Result<T, E = Error> = std::result::Result<T, E>;
@@ -50,7 +50,7 @@ pub fn run(config: &Configuration) {
                     None => continue,
                 };
 
-                if output.status.success() == true {
+                if output.status.success() {
                     let mut new_entry = Entry::new();
                     new_entry.set_url(&db_entry.url_);
                     new_entry.set_username(&db_entry.username_);
@@ -162,7 +162,7 @@ fn unlock_db(source: &Source) -> Result<Database> {
             Err(err) => {
                 return Err(Error::OpenFailed {
                     file: source.file_.to_owned(),
-                    source: OtherError::KpdbError { source: err },
+                    source: LibraryError::KpdbError { source: err },
                 })
             }
         };

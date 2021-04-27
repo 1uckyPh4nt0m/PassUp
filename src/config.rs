@@ -57,35 +57,23 @@ pub enum Error {
     //*********************************************************************************
     //Config Errors
     #[snafu(display("Could not open config from {}: {}", path, source))]
-    ConfigOpen {
-        path: String,
-        source: std::io::Error
-    },
+    ConfigOpen { path: String, source: std::io::Error },
     #[snafu(display("Config file from {} is not a valid toml file: {}", path, source))]
-    ConfigWrongFormat {
-        path: String,
-        source: toml::de::Error
-    },
+    ConfigWrongFormat { path: String, source: toml::de::Error },
     #[snafu(display("Wrong browser type set in config file"))]
     ConfigBrowserTypeWrong,
     //*********************************************************************************
     //Active Profile Errors
     #[snafu(display("Active profile field missing in config file {}", path))]
-    ActiveProfileMissingField {
-        path: String
-    },
+    ActiveProfileMissingField { path: String },
     //*********************************************************************************
     //Profile Errors
     #[snafu(display("Profile field missing in config file {}", path))]
-    ProfileNotFound {
-        path: String
-    },
+    ProfileNotFound { path: String },
     #[snafu(display("Profile is not a valid toml table"))]
     ProfileWrongFormat,
     #[snafu(display("Active profile is not present in the config file {}", path))]
-    ProfileAPNotPresent {
-        path: String
-    },
+    ProfileAPNotPresent { path: String },
     #[snafu(display("Profile type missing"))]
     ProfileTypeMissing,
     #[snafu(display("Wrong profile, has to be either \"kdbx\" or \"pass\""))]
@@ -95,9 +83,7 @@ pub enum Error {
     //*********************************************************************************
     //Sources Errors
     #[snafu(display("Sources missing in config file {}", path))]
-    SourcesNotFound {
-        path: String
-    },
+    SourcesNotFound { path: String },
     #[snafu(display("Sources is not a valid toml array"))]
     SourcesWrongFormat,
     #[snafu(display("Missing name field in sources"))]
@@ -114,9 +100,7 @@ pub enum Error {
     #[snafu(display("Missing dir field in scripts"))]
     ScriptsDirMissing,
     #[snafu(display("Script dir {} not present on system!", dir))]
-    ScriptsDirNotPresent {
-        dir: String
-    }
+    ScriptsDirNotPresent { dir: String }
 }
 
 type Result<T, E=Error> = std::result::Result<T, E>;
