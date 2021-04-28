@@ -5,7 +5,7 @@ use rpassword::read_password;
 use std::fs;
 use std::str;
 
-use crate::config::{Configuration, Source};
+use crate::{config::{Configuration, Source}, utils};
 use crate::utils::{exec_script, get_pw, DBEntry, DB};
 use kpdb::{CompositeKey, Database, Entry};
 use snafu::{ResultExt, Snafu};
@@ -14,6 +14,7 @@ use snafu::{ResultExt, Snafu};
 enum LibraryError {
     IoError { source: std::io::Error },
     KpdbError { source: kpdb::Error },
+    UtilsError { source: utils::Error }
 }
 
 #[derive(Debug, Snafu)]
@@ -28,6 +29,7 @@ enum Error {
     DbUpdateFailed { file: String, source: LibraryError },
     #[snafu(display("Could not open DB file {}: {}", file, source))]
     OpenFailed { file: String, source: LibraryError },
+    UtilsLibError { source: LibraryError}
 }
 
 type Result<T, E = Error> = std::result::Result<T, E>;
@@ -41,13 +43,22 @@ pub fn run(config: &Configuration) {
                 continue;
             }
         };
-        let db = parse_kdbx_db(&kpdb_db);
+        let db = match parse_kdbx_db(&kpdb_db) {
+            Ok(db) => db,
+            Err(err) => {
+                eprintln!("{}", err);
+                return;
+            }
+        };
 
         for db_entry in db.entries {
             for script in &config.scripts_ {
                 let output = match exec_script(script, &source.blocklist_, &db_entry, &config.browser_type_) {
-                    Some(output) => output,
-                    None => continue,
+                    Ok(output) => output,
+                    Err(err) => {
+                        eprintln!("Warning: {}", err);
+                        continue;
+                    }
                 };
 
                 if output.status.success() {
@@ -89,7 +100,7 @@ fn parse_db_entry(entry: &mut Entry) -> Result<DBEntry> {
     return Ok(DBEntry::new(url, username, old_pass, "".to_owned(), entry.uuid));
 }
 
-fn parse_kdbx_db(db: &Database) -> DB {
+fn parse_kdbx_db(db: &Database) -> Result<DB> {
     let mut entries = db.root_group.entries.clone();
     let mut db_vec = Vec::new();
     for entry in entries.iter_mut() {
@@ -101,10 +112,10 @@ fn parse_kdbx_db(db: &Database) -> DB {
             }
         };
 
-        db_entry.new_password_ = get_pw();
+        db_entry.new_password_ = get_pw().context(UtilsError).context(UtilsLibError)?;
         db_vec.push(db_entry);
     }
-    return DB::new(db_vec);
+    return Ok(DB::new(db_vec));
 }
 
 fn print_db_content(db: &Database) {

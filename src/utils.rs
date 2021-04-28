@@ -48,14 +48,12 @@ pub enum Error {
     UrlParseError { url: String, source: LibraryError },
     #[snafu(display("URL does not contain a domain name: {}", url))]
     UrlDomainError { url: String },
-    UrlBlocked,
+    UrlDomainBlocked,
     #[snafu(display("Script path does not result in a valid unicode string. Skipping site: {}", url))]
     ScriptPathError { url: String },
     #[snafu(display("Script path {} is not present", path))]
     ScriptMissingError { path: String },
     ScriptBlocked,
-    #[snafu(display("Error while executing Nightwatch: {}", source))]
-    NightwatchExecError { source: LibraryError }
 }
 
 type Result<T, E=Error> = std::result::Result<T, E>;
@@ -90,14 +88,12 @@ pub fn cmd(program: &'static str, args: &[&str]) -> Result<Output> {
 }
 
 pub fn exec_nightwatch(script_path: &str, db_entry: &DBEntry, browser_type: &String) -> Result<Output> {
-    return cmd("nightwatch", 
+    cmd("nightwatch", 
             &["--env", browser_type, "--test", script_path, 
-            &db_entry.url_, &db_entry.username_, &db_entry.old_password_, &db_entry.new_password_]);
+            &db_entry.url_, &db_entry.username_, &db_entry.old_password_, &db_entry.new_password_])
 }
 
-//TODO work from here
-
-pub fn get_script_name_check_blocklist(url: &String, blocklist: &Vec<String>) -> Option<String> {
+pub fn get_script_name_check_blocklist(url: &String, blocklist: &Vec<String>) -> Result<String> {
     let mut url_;
     if !url.contains("https://") {
         url_ = "https://".to_owned();
@@ -106,75 +102,41 @@ pub fn get_script_name_check_blocklist(url: &String, blocklist: &Vec<String>) ->
         url_ = url.to_owned();
     }
     
-    let target_url = match Url::parse(&url_) {
-        Ok(target_url) => target_url,
-        Err(_) => {
-            eprintln!("Could not parse URL {}", url_);
-            return None;
-        }
-    };
+    let target_url = Url::parse(&url_).context(UrlError).context(UrlParseError { url:url_ })?;
 
-    let mut target_domain = match target_url.domain() {
-        Some(domain) => domain.to_owned(),
-        None => {
-            eprintln!("URL does not contain a domain name: {}", url);
-            return None;
-        }
-    };
+    let mut target_domain = target_url.domain().ok_or(Error::UrlDomainError { url:url_ })?.to_owned();
 
-    if blocklist.contains(&target_domain.to_string()) {
-        return None;
+    if blocklist.contains(&target_domain) {
+        return Err(Error::UrlDomainBlocked);
     }
 
     target_domain.push_str(".js");
 
-    return Some(target_domain);
+    return Ok(target_domain);
 }
 
-pub fn get_script_path(script: &Script, blocklist: &Vec<String>, db_entry: &DBEntry) -> Option<String> {
+pub fn get_script_path(script: &Script, blocklist: &Vec<String>, db_entry: &DBEntry) -> Result<String> {
     let mut script_path = PathBuf::new();
     script_path.push(&script.dir_);
 
-    let script_name = match get_script_name_check_blocklist(&db_entry.url_, blocklist) {
-        Some(target) => target,
-        None => return None
-    };
+    let script_name = get_script_name_check_blocklist(&db_entry.url_, blocklist)?;
 
     script_path.push(&script_name);
-    let path = script_path.to_str().unwrap_or("");
-    if path.eq("") {
-        eprintln!("Could not unwrap script path. Skipping site \"{}\"!", db_entry.url_);
-        return None;
-    }
+    let path = script_path.to_str().ok_or(Error::ScriptPathError{ url:db_entry.url_ })?.to_owned();
 
     if !script_path.exists() {
-        eprintln!("Script {} not present!", script_path.to_str().unwrap());
-        return None;
+        return Err(Error::ScriptMissingError{ path });
     }
 
-    let script_path_string = match script_path.to_str() {
-        Some(path) => path.to_owned(),
-        None => return ScriptPathError
-    };
-
-    if script.blocklist_.contains(&script_path_string) {
-        return None;
+    if script.blocklist_.contains(&path) {
+        return Err(Error::ScriptBlocked);
     }
 
-    return Some(script_path_string)
+    return Ok(path)
 }
 
-pub fn exec_script(script: &Script, blocklist: &Vec<String>, db_entry: &DBEntry, browser_type: &String) -> Option<Output> {
-    let script_path = match get_script_path(script, blocklist, &db_entry) {
-        Some(path) => path,
-        None => return None
-    };
+pub fn exec_script(script: &Script, blocklist: &Vec<String>, db_entry: &DBEntry, browser_type: &String) -> Result<Output> {
+    let script_path = get_script_path(script, blocklist, &db_entry)?;
 
-    match exec_nightwatch(&script_path, &db_entry, browser_type) {
-        Ok(output) => return Some(output),
-        Err(err) => {
-            eprintln!("Error while executing Nightwatch: {}", err);
-            return None;
-        }
-    };
+    exec_nightwatch(&script_path, &db_entry, browser_type)
 }

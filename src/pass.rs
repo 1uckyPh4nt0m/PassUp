@@ -25,8 +25,11 @@ pub fn run(config: &Configuration) {
     for db_entry in db.entries {
         for script in &config.scripts_ {
             let output = match exec_script(script, &blocklist, &db_entry, &config.browser_type_) {
-                Some(output) => output,
-                None => continue
+                Ok(output) => output,
+                Err(err) => {
+                    eprintln!("Warning: {}", err);
+                    continue;
+                }
             };
     
             if output.status.success() {
