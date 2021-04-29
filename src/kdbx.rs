@@ -23,11 +23,11 @@ enum Error {
     DBNotPresent { file: String },
     #[snafu(display("No url was found for an entry"))]
     UrlMissing,
-    #[snafu(display("Credentials are incomplete for site {}", url))]
+    #[snafu(display("Credentials are incomplete for website \'{}\'", url))]
     CredentialMissing { url: String },
-    #[snafu(display("Could not update {} with error {}", file, source))]
+    #[snafu(display("Could not update \'{}\' with error {}", file, source))]
     DbUpdateFailed { file: String, source: LibraryError },
-    #[snafu(display("Could not open DB file {}: {}", file, source))]
+    #[snafu(display("Could not open DB file \'{}\': {}", file, source))]
     OpenFailed { file: String, source: LibraryError },
     UtilsLibError { source: LibraryError}
 }
@@ -55,6 +55,8 @@ pub fn run(config: &Configuration) {
             for script in &config.scripts_ {
                 let output = match exec_script(script, &source.blocklist_, &db_entry, &config.browser_type_) {
                     Ok(output) => output,
+                    Err(utils::Error::UrlDomainBlocked) => continue,
+                    Err(utils::Error::ScriptBlocked) => continue,
                     Err(err) => {
                         eprintln!("Warning: {}", err);
                         continue;
@@ -69,8 +71,10 @@ pub fn run(config: &Configuration) {
                     (&mut kpdb_db).root_group.remove_entry(db_entry.uuid);
                     (&mut kpdb_db).root_group.add_entry(new_entry);
                 } else {
-                    eprintln!("Warning: Could not update password for site: {} and username: {}", db_entry.url_, db_entry.username_);
-                    eprintln!("{}\n{}\n{}", output.status, str::from_utf8(&output.stdout).unwrap_or("error"), str::from_utf8(&output.stderr).unwrap_or("error"));
+                    let script_ = script.clone();
+                    let db_entry_ = db_entry.clone();
+                    let err = utils::Error::NightwatchExecError { script: script_, db_entry: db_entry_, output};
+                    eprintln!("{}", err);
                     continue;
                 }
             }

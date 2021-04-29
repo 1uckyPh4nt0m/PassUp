@@ -7,11 +7,13 @@ use kpdb::EntryUuid;
 use passwords::PasswordGenerator;
 use std::path::PathBuf;
 use url::{Url};
-use crate::config::{Script};
+use crate::config::{Configuration, Script};
 use std::io;
 use snafu::{ResultExt, Snafu};
+use which::which;
 
 
+#[derive(Debug, Clone)]
 pub struct DBEntry {
     pub url_: String,
     pub username_: String,
@@ -40,20 +42,24 @@ pub enum LibraryError {
 
 #[derive(Debug, Snafu)]
 pub enum Error {
-    #[snafu(display("A new password could not be generated: C{}", err))]
+    #[snafu(display("A new password could not be generated: {}", err))]
     PasswordGeneratorError { err: &'static str },
-    #[snafu(display("Could not execute command {}{}: {}", program, args, source))]
+    #[snafu(display("Could not execute command \'{}{}\': {}", program, args, source))]
     CmdError { program: &'static str, args: String, source: LibraryError },
-    #[snafu(display("Could not parse URL {} with error {}", url, source))]
+    #[snafu(display("Could not parse URL \'{}\' with error {}", url, source))]
     UrlParseError { url: String, source: LibraryError },
     #[snafu(display("URL does not contain a domain name: {}", url))]
     UrlDomainError { url: String },
     UrlDomainBlocked,
     #[snafu(display("Script path does not result in a valid unicode string. Skipping site: {}", url))]
     ScriptPathError { url: String },
-    #[snafu(display("Script path {} is not present", path))]
+    #[snafu(display("Script path \'{}\' is not present", path))]
     ScriptMissingError { path: String },
     ScriptBlocked,
+    #[snafu(display("Warning: Script in \'{}\' for website \'{}\' with username: \'{}\' did not execute succesfully\n{}", script.dir_, db_entry.url_, db_entry.username_, std::str::from_utf8(&output.stdout).unwrap_or("error")))]
+    NightwatchExecError { script: Script, db_entry: DBEntry, output: Output },
+    #[snafu(display("The binary {} was not found! Please install {}, refer to the README.md for help", binary_name, program))]
+    DependencyMissingError { binary_name: &'static str, program: &'static str },
 }
 
 type Result<T, E=Error> = std::result::Result<T, E>;
@@ -102,9 +108,9 @@ pub fn get_script_name_check_blocklist(url: &String, blocklist: &Vec<String>) ->
         url_ = url.to_owned();
     }
     
-    let target_url = Url::parse(&url_).context(UrlError).context(UrlParseError { url:url_ })?;
+    let target_url = Url::parse(&url_).context(UrlError).context(UrlParseError { url:url_.to_owned() })?;
 
-    let mut target_domain = target_url.domain().ok_or(Error::UrlDomainError { url:url_ })?.to_owned();
+    let mut target_domain = target_url.domain().ok_or(Error::UrlDomainError { url:url_.to_owned() })?.to_owned();
 
     if blocklist.contains(&target_domain) {
         return Err(Error::UrlDomainBlocked);
@@ -122,7 +128,7 @@ pub fn get_script_path(script: &Script, blocklist: &Vec<String>, db_entry: &DBEn
     let script_name = get_script_name_check_blocklist(&db_entry.url_, blocklist)?;
 
     script_path.push(&script_name);
-    let path = script_path.to_str().ok_or(Error::ScriptPathError{ url:db_entry.url_ })?.to_owned();
+    let path = script_path.to_str().ok_or(Error::ScriptPathError{ url:db_entry.url_.to_owned() })?.to_owned();
 
     if !script_path.exists() {
         return Err(Error::ScriptMissingError{ path });
@@ -139,4 +145,30 @@ pub fn exec_script(script: &Script, blocklist: &Vec<String>, db_entry: &DBEntry,
     let script_path = get_script_path(script, blocklist, &db_entry)?;
 
     exec_nightwatch(&script_path, &db_entry, browser_type)
+}
+
+pub fn check_dependencies(config: &Configuration) -> Result<()> {
+    //TODO maybe allow user to set path to nightwatch
+    let binary_name = "nightwatch";
+    match which(binary_name) {
+        Ok(_) => (),
+        Err(_) => return Err(Error::DependencyMissingError { binary_name, program: "Nightwatch"})
+
+    }
+    if config.browser_type_.eq("firefox") {
+        let binary_name = "firefox";
+        match which(binary_name) {
+            Ok(_) => (),
+            Err(_) => return Err(Error::DependencyMissingError { binary_name, program: "Firefox"})
+
+        }
+    } else if config.browser_type_.eq("chrome") {
+        let binary_name = "google-chrome";
+        match which(binary_name) {
+            Ok(_) => (),
+            Err(_) => return Err(Error::DependencyMissingError { binary_name, program: "Chrome"})
+        }
+    }
+
+    Ok(())
 }

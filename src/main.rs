@@ -9,7 +9,7 @@ extern crate which;
 
 use clap::{Arg, App};
 use config::{parse_config};
-use which::which;
+use utils::check_dependencies;
 
 //TODO: Errors für pass und utils anlegen
 //TODO: Updateprozess beschleunigen via Multithreading
@@ -35,40 +35,18 @@ fn main() {
     let config = match parse_config(config_path) {
         Ok(config) => config,
         Err(err) => {
-            eprintln!("Error: {}", err);
+            eprintln!("Configuration Error: {}", err);
             return;
         }
     };
 
-    //TODO maybe allow to specify path to nightwatch
-    //TODO move to utils and create errors
-    match which("nightwatch") {
-        Ok(_) => (),
-        Err(_) => {
-            eprintln!("The binary nightwatch was not found! Please install Nightwatch, refer to the README.md for help.");
+    match check_dependencies(&config) {
+        Ok(()) => (),
+        Err(err) => {
+            eprintln!("Dependency Error: {}", err);
             return;
         }
-    }
-    if config.browser_type_.eq("firefox") {
-        match which("firefox") {
-            Ok(_) => (),
-            Err(_) => {
-                eprintln!("The binary firefox was not found! Please install Firefox, refer to the README.md for help.");
-                return;
-            }
-        }
-    } else if config.browser_type_.eq("chrome") {
-        match which("google-chrome") {
-            Ok(_) => (),
-            Err(_) => {
-                eprintln!("The binary google-chrome was not found! Please install Chrome, refer to the README.md for help.");
-                return;
-            }
-        }
-    } else {
-        eprintln!("Browser type is neither 'firefox' nor 'chrome'! This should not happen!");
-        return;
-    }
+    };
 
     if config.profile_.type_.eq("kdbx") {
         kdbx::run(&config);
