@@ -5,15 +5,38 @@ use std::fs;
 
 use kpdb::EntryUuid;
 
-use crate::utils::{get_pw, cmd, DB, DBEntry, exec_script};
+use crate::utils;
 use crate::config::{Configuration};
+use snafu::{ResultExt, Snafu};
 
+#[derive(Debug, Snafu)]
+pub enum LibraryError {
+    IoError { source: std::io::Error },
+    UtilsError { source: utils::Error }
+}
+
+#[derive(Debug, Snafu)]
+pub enum Error {
+    #[snafu(display("Could not get path to the users home directory"))]
+    HomeDirError,
+    #[snafu(display("Path is not a valid unicode string"))]
+    PathToStrError,
+    #[snafu(display("Could not read directory: \'{}\' with error: {}", path, source))]
+    PassStoreNotFound { path: String, source: LibraryError },
+    #[snafu(display("Password generation is not working"))]
+    PassGenError { source: LibraryError },
+    #[snafu(display("Update failed for entry: {}, {}, {}", db_entry.url_, db_entry.username_, db_entry.new_password_))]
+    PassUpdateError { db_entry: utils::DBEntry },
+    CmdError  { source: LibraryError },
+}
+
+type Result<T, E=Error> = std::result::Result<T, E>;
 
 pub fn run(config: &Configuration) { 
     let db = match parse_pass() {
-        Some(result) => result,
-        None => {
-            eprintln!("Parsing failed!");
+        Ok(result) => result,
+        Err(err) => {
+            eprintln!("{}", err);
             return;
         }
     };
@@ -24,41 +47,59 @@ pub fn run(config: &Configuration) {
     }
     for db_entry in db.entries {
         for script in &config.scripts_ {
-            let output = match exec_script(script, &blocklist, &db_entry, &config.browser_type_) {
-                Some(output) => output,
-                None => continue
+            let output = match utils::exec_script(script, &blocklist, &db_entry, &config.browser_type_) {
+                Ok(output) => output,
+                Err(utils::Error::UrlDomainBlocked) => continue,
+                Err(utils::Error::ScriptBlocked) => continue,
+                Err(err) => {
+                    eprintln!("Warning: {}", err);
+                    continue;
+                }
             };
     
             if output.status.success() {
-                update_pass_entry(&db_entry);
+                match update_pass_entry(&db_entry) {
+                    Ok(()) => (),
+                    Err(err) => {
+                        eprintln!("Warning: {}", err);
+                        continue;
+                    }
+                };
             } else {
-                println!("Could not update password!");
-                println!("{}\n{}\n{}", output.status, str::from_utf8(&output.stdout).unwrap_or("error"), str::from_utf8(&output.stderr).unwrap_or("error"));
+                let script_ = script.clone();
+                let db_entry_ = db_entry.clone();
+                let err = utils::Error::NightwatchExecError { script: script_, db_entry: db_entry_, output};
+                eprintln!("{}", err);
+                continue;
             }
         }
     }
 }
 
 
-fn parse_pass() -> Option<DB> {
+fn parse_pass() -> Result<utils::DB> {
     let mut path = PathBuf::new();
     let home_dir = match dirs::home_dir() {
         Some(dir) => dir,
-        None => return None
+        None => return Err(Error::HomeDirError)
     };
     path.push(home_dir);
     path.push(".password-store");
+    let path_s = match path.to_str() {
+        Some(path) => path.to_owned(),
+        None => return Err(Error::PathToStrError)
+    };
     
     let mut db = Vec::new();
 
-    let outer_dir = match fs::read_dir(&path) {
-        Ok(dir) => dir,
-        Err(_) => return None
-    };
+    let outer_dir = fs::read_dir(&path).context(IoError).context(PassStoreNotFound { path:path_s })?;
     for subdir_r in outer_dir {
         let subdir_os = match subdir_r {
             Ok(subdir_os) => subdir_os.file_name(),
-            Err(_) => continue,
+            Err(err) => {
+                eprintln!("Warning: {}", err);
+                continue;
+            }
         };
         let url = match subdir_os.to_str() {
             Some(dir) => dir.to_owned(),
@@ -73,12 +114,18 @@ fn parse_pass() -> Option<DB> {
         path.push(&url);
         let inner_dir = match fs::read_dir(&path) {
             Ok(dir) => dir,
-            Err(_) => continue
+            Err(err) => {
+                eprintln!("Warning: {}", err);
+                continue;
+            }
         };
         for dir_entry in inner_dir {
             let name = match dir_entry {
                 Ok(name) => name.file_name(),
-                Err(_) => continue,
+                Err(err) => {
+                    eprintln!("Warning: {}", err);
+                    continue;
+                }
             };
             let username = match name.to_str() {
                 Some(username) => username.to_string().replace(".gpg", ""),
@@ -91,7 +138,10 @@ fn parse_pass() -> Option<DB> {
             let arg = format!("{}/{}", &url, &username);
             let child = match Command::new("pass").args(&["show", &arg]).output() {
                 Ok(child) => child,
-                Err(_) => continue
+                Err(err) => {
+                    eprintln!("Warning: {}", err);
+                    continue;
+                }
             };
             if !child.status.success() {
                 continue;
@@ -99,32 +149,29 @@ fn parse_pass() -> Option<DB> {
 
             let password = match str::from_utf8(&child.stdout) {
                 Ok(pass) => pass.replace("\n", ""),
-                Err(_) => continue
+                Err(err) => {
+                    eprintln!("Warning: {}", err);
+                    continue;
+                }
             };
             
             let mut url_ = "https://".to_owned();
             url_.push_str(&url);
-            let entry = DBEntry::new(url_.clone(), username, password, get_pw(), EntryUuid::nil());
+            let new_password = utils::get_pw().context(UtilsError).context(PassGenError)?;
+            let entry = utils::DBEntry::new(url_.clone(), username, password, new_password, EntryUuid::nil());
             db.push(entry);
         }
     }
-    return Some(DB::new(db));
+    return Ok(utils::DB::new(db));
 }
 
-fn print_entry_on_error(db_entry: &DBEntry) {
-    println!("Update failed for entry: {}, {}, {}", db_entry.url_, db_entry.username_, db_entry.new_password_);
-}
-
-fn update_pass_entry(db_entry: &DBEntry) -> Option<()> {
+fn update_pass_entry(db_entry_: &utils::DBEntry) -> Result<()> {
+    let db_entry = db_entry_.clone();
     let url = db_entry.url_.clone().replace("https://", "");
     let pass_entry = format!("{}/{}", url, db_entry.username_);
-    let output = match cmd("pass", &["rm", &pass_entry]) {
-        Ok(output) => output,
-        Err(_) => return None
-    };
+    let output = utils::cmd("pass", &["rm", &pass_entry]).context(UtilsError).context(CmdError)?;
     if !output.status.success() {
-        print_entry_on_error(&db_entry);
-        return None;
+        return Err(Error::PassUpdateError { db_entry });
     }
 
     let pass = match Command::new("pass")
@@ -132,36 +179,25 @@ fn update_pass_entry(db_entry: &DBEntry) -> Option<()> {
         .stdin(Stdio::piped())
         .spawn() {
             Ok(pass) => pass,
-            Err(_) => {
-                print_entry_on_error(&db_entry);
-                return None;
-            }
-        };
+            Err(_) => return Err(Error::PassUpdateError { db_entry })
+    };
     
     let pass_input = format!("{}\n{}", db_entry.new_password_, db_entry.new_password_);
     let echo = match Command::new("echo")
         .arg(pass_input)
         .stdout(match pass.stdin {
             Some(stdin) => stdin,
-            None => {
-                print_entry_on_error(&db_entry);
-                return None;
-            }
-        }) // Converted into a Stdio here
+            None => return Err(Error::PassUpdateError { db_entry })
+        }) 
         .output() {
             Ok(echo) => echo,
-            Err(_) => {
-                print_entry_on_error(&db_entry);
-                return None;
-            }
+            Err(_) => return Err(Error::PassUpdateError { db_entry })
         };
 
     if !echo.status.success() {
-        print_entry_on_error(&db_entry);
-        return None;
+        return Err(Error::PassUpdateError { db_entry })
     }
-    //pass.wait(); // <-- why is this not working
     println!("Updated passwords!");
 
-    Some(())
+    Ok(())
 }

@@ -5,15 +5,16 @@ use rpassword::read_password;
 use std::fs;
 use std::str;
 
-use crate::config::{Configuration, Source};
+use crate::{config::{Configuration, Source}, utils};
 use crate::utils::{exec_script, get_pw, DBEntry, DB};
 use kpdb::{CompositeKey, Database, Entry};
 use snafu::{ResultExt, Snafu};
 
 #[derive(Debug, Snafu)]
-enum OtherError {
+enum LibraryError {
     IoError { source: std::io::Error },
     KpdbError { source: kpdb::Error },
+    UtilsError { source: utils::Error }
 }
 
 #[derive(Debug, Snafu)]
@@ -22,12 +23,13 @@ enum Error {
     DBNotPresent { file: String },
     #[snafu(display("No url was found for an entry"))]
     UrlMissing,
-    #[snafu(display("Credentials are incomplete for site {}", url))]
+    #[snafu(display("Credentials are incomplete for website \'{}\'", url))]
     CredentialMissing { url: String },
-    #[snafu(display("Could not update {} with error {}", file, source))]
-    DbUpdateFailed { file: String, source: OtherError },
-    #[snafu(display("Could not open DB file {}: {}", file, source))]
-    OpenFailed { file: String, source: OtherError },
+    #[snafu(display("Could not update \'{}\' with error {}", file, source))]
+    DbUpdateFailed { file: String, source: LibraryError },
+    #[snafu(display("Could not open DB file \'{}\': {}", file, source))]
+    OpenFailed { file: String, source: LibraryError },
+    UtilsLibError { source: LibraryError}
 }
 
 type Result<T, E = Error> = std::result::Result<T, E>;
@@ -41,16 +43,27 @@ pub fn run(config: &Configuration) {
                 continue;
             }
         };
-        let db = parse_kdbx_db(&kpdb_db);
+        let db = match parse_kdbx_db(&kpdb_db) {
+            Ok(db) => db,
+            Err(err) => {
+                eprintln!("{}", err);
+                return;
+            }
+        };
 
         for db_entry in db.entries {
             for script in &config.scripts_ {
                 let output = match exec_script(script, &source.blocklist_, &db_entry, &config.browser_type_) {
-                    Some(output) => output,
-                    None => continue,
+                    Ok(output) => output,
+                    Err(utils::Error::UrlDomainBlocked) => continue,
+                    Err(utils::Error::ScriptBlocked) => continue,
+                    Err(err) => {
+                        eprintln!("Warning: {}", err);
+                        continue;
+                    }
                 };
 
-                if output.status.success() == true {
+                if output.status.success() {
                     let mut new_entry = Entry::new();
                     new_entry.set_url(&db_entry.url_);
                     new_entry.set_username(&db_entry.username_);
@@ -58,8 +71,10 @@ pub fn run(config: &Configuration) {
                     (&mut kpdb_db).root_group.remove_entry(db_entry.uuid);
                     (&mut kpdb_db).root_group.add_entry(new_entry);
                 } else {
-                    eprintln!("Warning: Could not update password for site: {} and username: {}", db_entry.url_, db_entry.username_);
-                    eprintln!("{}\n{}\n{}", output.status, str::from_utf8(&output.stdout).unwrap_or("error"), str::from_utf8(&output.stderr).unwrap_or("error"));
+                    let script_ = script.clone();
+                    let db_entry_ = db_entry.clone();
+                    let err = utils::Error::NightwatchExecError { script: script_, db_entry: db_entry_, output};
+                    eprintln!("{}", err);
                     continue;
                 }
             }
@@ -89,7 +104,7 @@ fn parse_db_entry(entry: &mut Entry) -> Result<DBEntry> {
     return Ok(DBEntry::new(url, username, old_pass, "".to_owned(), entry.uuid));
 }
 
-fn parse_kdbx_db(db: &Database) -> DB {
+fn parse_kdbx_db(db: &Database) -> Result<DB> {
     let mut entries = db.root_group.entries.clone();
     let mut db_vec = Vec::new();
     for entry in entries.iter_mut() {
@@ -101,10 +116,10 @@ fn parse_kdbx_db(db: &Database) -> DB {
             }
         };
 
-        db_entry.new_password_ = get_pw();
+        db_entry.new_password_ = get_pw().context(UtilsError).context(UtilsLibError)?;
         db_vec.push(db_entry);
     }
-    return DB::new(db_vec);
+    return Ok(DB::new(db_vec));
 }
 
 fn print_db_content(db: &Database) {
@@ -162,7 +177,7 @@ fn unlock_db(source: &Source) -> Result<Database> {
             Err(err) => {
                 return Err(Error::OpenFailed {
                     file: source.file_.to_owned(),
-                    source: OtherError::KpdbError { source: err },
+                    source: LibraryError::KpdbError { source: err },
                 })
             }
         };
