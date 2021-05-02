@@ -170,5 +170,5 @@ pub fn check_dependencies(config: &Configuration) -> Result<()> {
         }
     }
 
-    Ok(())
+    return Ok(());
 }
