@@ -1,5 +1,6 @@
 active_profile = "my-work-pass"
 browser_type = "firefox"
+nr_threads = 10
 
 [profile.my-private-keepassx]
 type = "kdbx"

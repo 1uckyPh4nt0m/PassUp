@@ -11,8 +11,6 @@ use clap::{Arg, App};
 use config::{parse_config};
 use which::which;
 
-//TODO: Errors für pass und utils anlegen
-//TODO: Updateprozess beschleunigen via Multithreading
 //TODO: [urls] funktionalität hinzufügen
 //TODO: Beispiel Nightwatch scripts erstellen
 

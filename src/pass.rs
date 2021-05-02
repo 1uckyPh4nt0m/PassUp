@@ -1,11 +1,11 @@
-use std::{process::{Command, Stdio}};
+use std::{process::{Command, Stdio}, sync::mpsc::channel};
 use std::str;
 use std::path::PathBuf;
 use std::fs;
 
 use kpdb::EntryUuid;
 
-use crate::utils::{get_pw, cmd, DB, DBEntry, exec_nightwatch, get_script_path};
+use crate::{utils::{DB, DBEntry, cmd, get_pw, run_update_threads}};
 use crate::config::{Configuration};
 
 
@@ -17,32 +17,33 @@ pub fn run(config: &Configuration) {
             return;
         }
     };
-    
-    let mut blocklist = Vec::new();
-    if !config.sources_.is_empty() {
+
+    let blocklist;
+    if config.sources_.is_empty() {
+        blocklist = Vec::new();
+    } else {
         blocklist = config.sources_[0].blocklist_.clone();
     }
-    for db_entry in db.entries {
-        for script in &config.scripts_ {
-            let script_path = match get_script_path(script, &blocklist, &db_entry) {
-                Some(path) => path,
-                None => continue
-            };
 
-            let output = match exec_nightwatch(&script_path, &db_entry, &config.browser_type_) {
-                Ok(output) => output,
-                Err(err) => {
-                    eprintln!("Error while executing Nightwatch: {}", err);
-                    continue;
-                }
-            };
-    
-            if output.status.success() {
-                update_pass_entry(&db_entry);
-            } else {
-                println!("Could not update password!");
-                println!("{}\n{}\n{}", output.status, str::from_utf8(&output.stdout).unwrap_or("error"), str::from_utf8(&output.stderr).unwrap_or("error"));
+    let (tx, rx) = channel();
+    let nr_jobs = run_update_threads(&db, &blocklist, config, tx);
+
+    let thread_results = rx.iter().take(nr_jobs);
+    for thread_result in thread_results {
+        let output = match thread_result.result_ {
+            Ok(output) => output,
+            Err(err) => {
+                eprintln!("Error while executing Nightwatch: {}", err);
+                continue;
             }
+        };
+
+        let db_entry = thread_result.db_entry_;
+        if output.status.success() {
+            update_pass_entry(&db_entry);
+        } else {
+            println!("Could not update password!");
+            println!("{}\n{}\n{}", output.status, str::from_utf8(&output.stdout).unwrap_or("error"), str::from_utf8(&output.stderr).unwrap_or("error"));
         }
     }
 }
@@ -126,7 +127,7 @@ fn print_entry_on_error(db_entry: &DBEntry) {
 fn update_pass_entry(db_entry: &DBEntry) -> Option<()> {
     let url = db_entry.url_.clone().replace("https://", "");
     let pass_entry = format!("{}/{}", url, db_entry.username_);
-    let output = match cmd("pass", &["rm", &pass_entry]) {
+    let output = match cmd("pass", &["rm", &pass_entry], "0") {
         Ok(output) => output,
         Err(_) => return None
     };

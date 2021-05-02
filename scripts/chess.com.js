@@ -5,26 +5,26 @@ module.exports = {
     const oldPasswd = process.argv[8];
     const newPasswd = process.argv[9];
 
-	//console.log(userName);
-
 	browser
 		.url(url)
-      	.waitForElementVisible('body')
-		.waitForElementVisible('a.button.auth.login')
+      	.waitForElementPresent('body')
+		.waitForElementPresent('a.button.auth.login')
 		.click('a.button.auth.login')
-		.waitForElementVisible('input[name=_username]')
+		.waitForElementPresent('input[name=_username]')
       	.setValue('input[name=_username]', userName)
       	.setValue('input[name=_password]', oldPasswd)
-		.assert.visible('button.login')
-		.click('button.login')
-		.waitForElementVisible('a.action.link.has-popover.settings')
+		.waitForElementPresent('button#login')
+		.click('button#login')
+		.waitForElementPresent('a.action.link.has-popover.settings')
 		.click('a.action.link.has-popover.settings')
-		.waitForElementVisible('input[name=password[currentPassword]]')
-		.setValue('input[name=password[currentPassword]]', oldPasswd)
-		.setValue('input[name=password[password][first]]', newPasswd)
-		.setValue('input[name=password[password][second]]', newPasswd)
+		.waitForElementPresent('partial link text', 'Password')
+		.click('partial link text', 'Password')
+		.waitForElementPresent('#password_currentPassword')
+		.setValue('#password_currentPassword', oldPasswd)
+		.setValue('#password_password_first', newPasswd)
+		.setValue('#password_password_second', newPasswd)
 		.click('#password_save')
-		.assert.containsText('button.login')
+		.assert.visible('button#login')
 		.end();
   }
 };

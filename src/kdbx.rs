@@ -2,13 +2,14 @@ extern crate kpdb;
 extern crate rpassword;
 
 use rpassword::read_password;
-use std::{fs, process::Output, thread::JoinHandle};
+use std::{fs};
 use std::str;
 
-use crate::config::{Configuration, Source};
-use crate::utils::{exec_nightwatch, get_pw, DBEntry, DB, get_script_path};
+use crate::{config::{Configuration, Source}, utils::{run_update_threads}};
+use crate::utils::{get_pw, DBEntry, DB};
 use kpdb::{CompositeKey, Database, Entry};
 use snafu::{ResultExt, Snafu};
+use std::sync::mpsc::channel;
 
 #[derive(Debug, Snafu)]
 enum OtherError {
@@ -30,16 +31,7 @@ enum Error {
     OpenFailed { file: String, source: OtherError },
 }
 
-struct ThreadResult {
-    db_entry_: DBEntry,
-    result_: JoinHandle<Result<Output, std::io::Error>>
-}
-
 type Result<T, E = Error> = std::result::Result<T, E>;
-
-impl ThreadResult {
-    fn new(db_entry_: DBEntry, result_: JoinHandle<Result<Output, std::io::Error>>) -> Self { Self { db_entry_, result_ } }
-}
 
 pub fn run(config: &Configuration) {
     for source in &config.sources_ {
@@ -52,34 +44,12 @@ pub fn run(config: &Configuration) {
         };
         let db = parse_kdbx_db(&kpdb_db);
 
-        let mut thread_results = Vec::new();
-        for db_entry in db.entries {
-            for script in &config.scripts_ {
-                let entry = db_entry.clone();
-                let script_path = match get_script_path(script, &source.blocklist_, &db_entry) {
-                    Some(path) => path,
-                    None => continue
-                };
-                
-                let browser_type = config.browser_type_.to_owned();
-                let result = std::thread::spawn(move || {
-                    match exec_nightwatch(&script_path, &entry, &browser_type) {
-                        Ok(output) => return Ok(output),
-                        Err(err) => {
-                            return Err(err);
-                        }
-                    };
-                });
-                thread_results.push(ThreadResult::new(db_entry.clone(), result));
-            }
-        }
+        let (tx, rx) = channel();
+        let nr_jobs = run_update_threads(&db, &source.blocklist_, config, tx);
 
+        let thread_results = rx.iter().take(nr_jobs);
         for thread_result in thread_results {
-            let output_r = match thread_result.result_.join() {
-                Ok(output) => output,
-                Err(_) => continue
-            };
-            let output = match output_r {
+            let output = match thread_result.result_ {
                 Ok(output) => output,
                 Err(err) => {
                     eprintln!("Error while executing Nightwatch: {}", err);
@@ -95,6 +65,7 @@ pub fn run(config: &Configuration) {
                 new_entry.set_password(&db_entry.new_password_);
                 (&mut kpdb_db).root_group.remove_entry(db_entry.uuid);
                 (&mut kpdb_db).root_group.add_entry(new_entry);
+                println!("Updated password on website {}, with username {}", db_entry.url_, db_entry.username_);
             } else {
                 eprintln!("Warning: Could not update password for site: {} and username: {}", db_entry.url_, db_entry.username_);
                 eprintln!("{}\n{}\n{}", output.status, str::from_utf8(&output.stdout).unwrap_or("error"), str::from_utf8(&output.stderr).unwrap_or("error"));
@@ -191,6 +162,10 @@ fn unlock_db(source: &Source) -> Result<Database> {
             Ok(db) => {
                 password_wrong = false;
                 db
+            }
+            Err(kpdb::Error::CryptoError(_)) => {
+                println!("Wrong password! Please try again:");
+                continue;
             }
             Err(kpdb::Error::InvalidKey) => {
                 println!("Wrong password! Please try again:");

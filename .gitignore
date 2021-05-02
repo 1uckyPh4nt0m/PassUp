@@ -24,3 +24,6 @@ scripts/nightwatch.conf.js
 scripts/tests_output/
 tests/
 tests_output/
+reports/CHROME_90.0.4430.85_Linux_chess.com.xml
+reports/FIREFOX_88.0_5.4.0-54-generic_chess.com.xml
+reports/FIREFOX_88.0_5.4.0-54-generic_lichess.org.xml
