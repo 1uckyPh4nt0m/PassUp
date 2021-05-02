@@ -2,15 +2,17 @@ extern crate passwords;
 extern crate toml;
 extern crate url;
 
-use std::process::{Command, Output};
+use std::{process::{Command, Output}, sync::mpsc::Sender};
 use kpdb::EntryUuid;
 use passwords::PasswordGenerator;
+use threadpool::ThreadPool;
 use std::path::PathBuf;
 use url::{Url};
 use crate::config::{Configuration, Script};
 use std::io;
 use snafu::{ResultExt, Snafu};
 use which::which;
+use crate::utils;
 
 
 #[derive(Debug, Clone)]
@@ -56,13 +58,21 @@ pub enum Error {
     #[snafu(display("Script path \'{}\' is not present", path))]
     ScriptMissingError { path: String },
     ScriptBlocked,
-    #[snafu(display("Warning: Script in \'{}\' for website \'{}\' with username: \'{}\' did not execute succesfully\n{}", script.dir_, db_entry.url_, db_entry.username_, std::str::from_utf8(&output.stdout).unwrap_or("error")))]
-    NightwatchExecError { script: Script, db_entry: DBEntry, output: Output },
+    #[snafu(display("Warning: Script for website \'{}\' with username: \'{}\' did not execute succesfully\n{}", db_entry.url_, db_entry.username_, std::str::from_utf8(&output.stdout).unwrap_or("error")))]
+    NightwatchExecError { db_entry: DBEntry, output: Output },
     #[snafu(display("The binary {} was not found! Please install {}, refer to the README.md for help", binary_name, program))]
     DependencyMissingError { binary_name: &'static str, program: &'static str },
 }
 
 type Result<T, E=Error> = std::result::Result<T, E>;
+
+pub struct ThreadResult {
+    pub db_entry_: DBEntry,
+    pub result_: Result<Output, utils::Error>
+}
+impl ThreadResult {
+    fn new(db_entry_: DBEntry, result_: Result<Output, utils::Error>) -> Self { Self { db_entry_, result_ } }
+}
 
 //TODO let user select parameters
 pub fn get_pw() -> Result<String> {
@@ -82,7 +92,7 @@ pub fn get_pw() -> Result<String> {
     };
 }
 
-pub fn cmd(program: &'static str, args: &[&str]) -> Result<Output> {
+pub fn cmd(program: &'static str, args: &[&str], port: &str) -> Result<Output> {
     let args_v = args.to_owned();
     let mut args_s = String::new();
     for arg in args_v {
@@ -90,13 +100,14 @@ pub fn cmd(program: &'static str, args: &[&str]) -> Result<Output> {
     }
     return Command::new(program)
         .args(args)
+        .env("PORT", port)
         .output().context(IoError).context(CmdError {program, args:args_s});
 }
 
-pub fn exec_nightwatch(script_path: &str, db_entry: &DBEntry, browser_type: &String) -> Result<Output> {
+pub fn exec_nightwatch(script_path: &str, db_entry: &DBEntry, browser_type: &String, port: &String) -> Result<Output> {
     cmd("nightwatch", 
             &["--env", browser_type, "--test", script_path, 
-            &db_entry.url_, &db_entry.username_, &db_entry.old_password_, &db_entry.new_password_])
+            &db_entry.url_, &db_entry.username_, &db_entry.old_password_, &db_entry.new_password_], port)
 }
 
 pub fn get_script_name_check_blocklist(url: &String, blocklist: &Vec<String>) -> Result<String> {
@@ -121,30 +132,27 @@ pub fn get_script_name_check_blocklist(url: &String, blocklist: &Vec<String>) ->
     return Ok(target_domain);
 }
 
-pub fn get_script_path(script: &Script, blocklist: &Vec<String>, db_entry: &DBEntry) -> Result<String> {
-    let mut script_path = PathBuf::new();
-    script_path.push(&script.dir_);
+pub fn get_script_path(scripts: &Vec<Script>, blocklist: &Vec<String>, db_entry: &DBEntry) -> Result<String> {
+    for script in scripts {
+        let mut script_path = PathBuf::new();
+        script_path.push(&script.dir_);
 
-    let script_name = get_script_name_check_blocklist(&db_entry.url_, blocklist)?;
+        let script_name = get_script_name_check_blocklist(&db_entry.url_, blocklist)?;
 
-    script_path.push(&script_name);
-    let path = script_path.to_str().ok_or(Error::ScriptPathError{ url:db_entry.url_.to_owned() })?.to_owned();
+        script_path.push(&script_name);
+        let path = script_path.to_str().ok_or(Error::ScriptPathError{ url:db_entry.url_.to_owned() })?.to_owned();
 
-    if !script_path.exists() {
-        return Err(Error::ScriptMissingError{ path });
+        if !script_path.exists() {
+            //return Err(Error::ScriptMissingError{ path });
+            continue;
+        }
+
+        if script.blocklist_.contains(&path) {
+            return Err(Error::ScriptBlocked);
+        }
+        return Ok(path);
     }
-
-    if script.blocklist_.contains(&path) {
-        return Err(Error::ScriptBlocked);
-    }
-
-    return Ok(path)
-}
-
-pub fn exec_script(script: &Script, blocklist: &Vec<String>, db_entry: &DBEntry, browser_type: &String) -> Result<Output> {
-    let script_path = get_script_path(script, blocklist, &db_entry)?;
-
-    exec_nightwatch(&script_path, &db_entry, browser_type)
+    return Err(Error::ScriptPathError{ url:db_entry.url_.to_owned() });
 }
 
 pub fn check_dependencies(config: &Configuration) -> Result<()> {
@@ -171,4 +179,43 @@ pub fn check_dependencies(config: &Configuration) -> Result<()> {
     }
 
     return Ok(());
+}
+
+pub fn check_port_available(port: u16) -> bool {
+    match std::net::TcpListener::bind(("127.0.0.1", port)) {
+        Ok(_) => true,
+        Err(_) => false
+    }
+}
+
+pub fn run_update_threads(db: &DB, blocklist: &Vec<String>, config: &Configuration, tx: Sender<ThreadResult>) -> usize {
+    let mut port = 4444u16;
+    let mut nr_jobs = 0usize;
+    let pool = ThreadPool::new(config.nr_threads_);
+    for db_entry in db.entries.iter() {
+        let entry = db_entry.clone();
+        let script_path = match get_script_path(&config.scripts_, blocklist, &db_entry) {
+            Ok(path) => path,
+            Err(err) => {
+                eprintln!("Warning: {}", err);
+                continue;
+            }
+        };
+        
+        let browser_type = config.browser_type_.to_owned();
+        
+        nr_jobs += 1;
+        let tx = tx.clone();
+        pool.execute(move || {
+            match exec_nightwatch(&script_path, &entry, &browser_type, &port.to_string()) {
+                Ok(output) => tx.send(ThreadResult::new(entry, Ok(output))).expect("Error: Thread could not send"),
+                Err(err) => tx.send(ThreadResult::new(entry, Err(err))).expect("Error: Thread could not send")
+            };
+        });
+        // TODO check if port available
+        //while !check_port_available(port) {
+        port += 1;
+        //}
+    }
+    return nr_jobs;
 }

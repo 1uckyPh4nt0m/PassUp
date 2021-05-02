@@ -2,13 +2,14 @@ extern crate kpdb;
 extern crate rpassword;
 
 use rpassword::read_password;
-use std::fs;
+use std::{fs};
 use std::str;
 
-use crate::{config::{Configuration, Source}, utils};
-use crate::utils::{exec_script, get_pw, DBEntry, DB};
+use crate::{config::{Configuration, Source}, utils::{run_update_threads}};
+use crate::utils::{self, get_pw, DBEntry, DB};
 use kpdb::{CompositeKey, Database, Entry};
 use snafu::{ResultExt, Snafu};
+use std::sync::mpsc::channel;
 
 #[derive(Debug, Snafu)]
 enum LibraryError {
@@ -51,32 +52,35 @@ pub fn run(config: &Configuration) {
             }
         };
 
-        for db_entry in db.entries {
-            for script in &config.scripts_ {
-                let output = match exec_script(script, &source.blocklist_, &db_entry, &config.browser_type_) {
-                    Ok(output) => output,
-                    Err(utils::Error::UrlDomainBlocked) => continue,
-                    Err(utils::Error::ScriptBlocked) => continue,
-                    Err(err) => {
-                        eprintln!("Warning: {}", err);
-                        continue;
-                    }
-                };
+        let (tx, rx) = channel();
+        let nr_jobs = run_update_threads(&db, &source.blocklist_, config, tx);
 
-                if output.status.success() {
-                    let mut new_entry = Entry::new();
-                    new_entry.set_url(&db_entry.url_);
-                    new_entry.set_username(&db_entry.username_);
-                    new_entry.set_password(&db_entry.new_password_);
-                    (&mut kpdb_db).root_group.remove_entry(db_entry.uuid);
-                    (&mut kpdb_db).root_group.add_entry(new_entry);
-                } else {
-                    let script_ = script.clone();
-                    let db_entry_ = db_entry.clone();
-                    let err = utils::Error::NightwatchExecError { script: script_, db_entry: db_entry_, output};
-                    eprintln!("{}", err);
+        let thread_results = rx.iter().take(nr_jobs);
+        for thread_result in thread_results {
+            let output = match thread_result.result_ {
+                Ok(output) => output,
+                Err(utils::Error::UrlDomainBlocked) => continue,
+                Err(utils::Error::ScriptBlocked) => continue,
+                Err(err) => {
+                    eprintln!("Error while executing Nightwatch: {}", err);
                     continue;
                 }
+            };
+
+            let db_entry = thread_result.db_entry_;
+            if output.status.success() == true {
+                let mut new_entry = Entry::new();
+                new_entry.set_url(&db_entry.url_);
+                new_entry.set_username(&db_entry.username_);
+                new_entry.set_password(&db_entry.new_password_);
+                (&mut kpdb_db).root_group.remove_entry(db_entry.uuid);
+                (&mut kpdb_db).root_group.add_entry(new_entry);
+                println!("Updated password on website {}, with username {}", db_entry.url_, db_entry.username_);
+            } else {
+                let db_entry_ = db_entry.clone();
+                let err = utils::Error::NightwatchExecError { db_entry: db_entry_, output};
+                eprintln!("{}", err);
+                continue;
             }
         }
         match update_db(source, &kpdb_db) {
@@ -169,6 +173,10 @@ fn unlock_db(source: &Source) -> Result<Database> {
             Ok(db) => {
                 password_wrong = false;
                 db
+            }
+            Err(kpdb::Error::CryptoError(_)) => {
+                println!("Wrong password! Please try again:");
+                continue;
             }
             Err(kpdb::Error::InvalidKey) => {
                 println!("Wrong password! Please try again:");

@@ -1,11 +1,11 @@
-use std::{process::{Command, Stdio}};
+use std::{process::{Command, Stdio}, sync::mpsc::channel, thread};
 use std::str;
 use std::path::PathBuf;
 use std::fs;
 
 use kpdb::EntryUuid;
 
-use crate::utils;
+use crate::utils::{self, run_update_threads};
 use crate::config::{Configuration};
 use snafu::{ResultExt, Snafu};
 
@@ -40,40 +40,45 @@ pub fn run(config: &Configuration) {
             return;
         }
     };
-    
-    let mut blocklist = Vec::new();
-    if !config.sources_.is_empty() {
+
+    let blocklist;
+    if config.sources_.is_empty() {
+        blocklist = Vec::new();
+    } else {
         blocklist = config.sources_[0].blocklist_.clone();
     }
-    for db_entry in db.entries {
-        for script in &config.scripts_ {
-            let output = match utils::exec_script(script, &blocklist, &db_entry, &config.browser_type_) {
-                Ok(output) => output,
-                Err(utils::Error::UrlDomainBlocked) => continue,
-                Err(utils::Error::ScriptBlocked) => continue,
+
+    let (tx, rx) = channel();
+    let nr_jobs = run_update_threads(&db, &blocklist, config, tx);
+    let thread_results = rx.iter().take(nr_jobs);
+    for thread_result in thread_results {
+        let output = match thread_result.result_ {
+            Ok(output) => output,
+            Err(err) => {
+                eprintln!("Warning: {}", err);
+                continue;
+            } 
+        };
+
+        let db_entry = thread_result.db_entry_;
+        if output.status.success() {
+            match update_pass_entry(&db_entry) {
+                Ok(()) => (),
                 Err(err) => {
                     eprintln!("Warning: {}", err);
                     continue;
                 }
             };
-    
-            if output.status.success() {
-                match update_pass_entry(&db_entry) {
-                    Ok(()) => (),
-                    Err(err) => {
-                        eprintln!("Warning: {}", err);
-                        continue;
-                    }
-                };
-            } else {
-                let script_ = script.clone();
-                let db_entry_ = db_entry.clone();
-                let err = utils::Error::NightwatchExecError { script: script_, db_entry: db_entry_, output};
-                eprintln!("{}", err);
-                continue;
-            }
+        } else {
+            let db_entry_ = db_entry.clone();
+            let err = utils::Error::NightwatchExecError { db_entry: db_entry_, output};
+            eprintln!("{}", err);
+            continue;
+
         }
-    }
+
+}
+    
 }
 
 
@@ -169,7 +174,7 @@ fn update_pass_entry(db_entry_: &utils::DBEntry) -> Result<()> {
     let db_entry = db_entry_.clone();
     let url = db_entry.url_.clone().replace("https://", "");
     let pass_entry = format!("{}/{}", url, db_entry.username_);
-    let output = utils::cmd("pass", &["rm", &pass_entry]).context(UtilsError).context(CmdError)?;
+    let output = utils::cmd("pass", &["rm", &pass_entry], "0").context(UtilsError).context(CmdError)?;
     if !output.status.success() {
         return Err(Error::PassUpdateError { db_entry });
     }
