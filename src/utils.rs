@@ -143,7 +143,6 @@ pub fn get_script_path(scripts: &Vec<Script>, blocklist: &Vec<String>, db_entry:
         let path = script_path.to_str().ok_or(Error::ScriptPathError{ url:db_entry.url_.to_owned() })?.to_owned();
 
         if !script_path.exists() {
-            //return Err(Error::ScriptMissingError{ path });
             continue;
         }
 

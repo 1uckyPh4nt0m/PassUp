@@ -54,7 +54,7 @@ pub fn run(config: &Configuration) {
 
         let (tx, rx) = channel();
         let nr_jobs = run_update_threads(&db, &source.blocklist_, config, tx);
-
+  
         let thread_results = rx.iter().take(nr_jobs);
         for thread_result in thread_results {
             let output = match thread_result.result_ {

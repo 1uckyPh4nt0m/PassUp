@@ -1,4 +1,4 @@
-use std::{process::{Command, Stdio}, sync::mpsc::channel, thread};
+use std::{process::{Command, Stdio}, sync::mpsc::channel};
 use std::str;
 use std::path::PathBuf;
 use std::fs;
@@ -50,6 +50,7 @@ pub fn run(config: &Configuration) {
 
     let (tx, rx) = channel();
     let nr_jobs = run_update_threads(&db, &blocklist, config, tx);
+    
     let thread_results = rx.iter().take(nr_jobs);
     for thread_result in thread_results {
         let output = match thread_result.result_ {
@@ -76,9 +77,7 @@ pub fn run(config: &Configuration) {
             continue;
 
         }
-
-}
-    
+    }
 }
 
 
