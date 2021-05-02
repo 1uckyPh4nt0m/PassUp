@@ -59,8 +59,6 @@ pub fn run(config: &Configuration) {
         for thread_result in thread_results {
             let output = match thread_result.result_ {
                 Ok(output) => output,
-                Err(utils::Error::UrlDomainBlocked) => continue,
-                Err(utils::Error::ScriptBlocked) => continue,
                 Err(err) => {
                     eprintln!("Error while executing Nightwatch: {}", err);
                     continue;

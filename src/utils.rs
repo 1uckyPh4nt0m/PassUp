@@ -196,6 +196,8 @@ pub fn run_update_threads(db: &DB, blocklist: &Vec<String>, config: &Configurati
         let entry = db_entry.clone();
         let script_path = match get_script_path(&config.scripts_, blocklist, &db_entry) {
             Ok(path) => path,
+            Err(utils::Error::UrlDomainBlocked) => continue,
+            Err(utils::Error::ScriptBlocked) => continue,
             Err(err) => {
                 eprintln!("Warning: {}", err);
                 continue;

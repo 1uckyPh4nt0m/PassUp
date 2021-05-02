@@ -24,7 +24,6 @@ module.exports = {
 		.setValue('#password_password_first', newPasswd)
 		.setValue('#password_password_second', newPasswd)
 		.click('#password_save')
-		.assert.visible('button#login')
 		.end();
   }
 };
