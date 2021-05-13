@@ -2,18 +2,18 @@ extern crate passwords;
 extern crate toml;
 extern crate url;
 
-use std::{process::{Command, Output}, sync::mpsc::Sender};
+use std::{collections::HashMap, process::{Command, Output}, sync::mpsc::Sender};
 use kpdb::EntryUuid;
 use passwords::PasswordGenerator;
 use threadpool::ThreadPool;
 use std::path::PathBuf;
 use url::{Url};
-use crate::config::{Configuration, Script};
+use crate::config::{BrowserType, Configuration};
 use std::io;
 use snafu::{ResultExt, Snafu};
 use which::which;
 use crate::utils;
-
+use regex::Regex;
 
 #[derive(Debug, Clone)]
 pub struct DBEntry {
@@ -39,7 +39,8 @@ impl DB {
 #[derive(Debug, Snafu)]
 pub enum LibraryError {
     UrlError { source: url::ParseError },
-    IoError { source: io::Error }
+    IoError { source: io::Error },
+    RegexLibError { source: regex::Error }
 }
 
 #[derive(Debug, Snafu)]
@@ -62,6 +63,8 @@ pub enum Error {
     NightwatchExecError { db_entry: DBEntry, output: Output },
     #[snafu(display("The binary {} was not found! Please install {}, refer to the README.md for help", binary_name, program))]
     DependencyMissingError { binary_name: &'static str, program: &'static str },
+    #[snafu(display("The provided regex expression was faulty: {}", expr))]
+    RegexError { expr: String, source: LibraryError }
 }
 
 type Result<T, E=Error> = std::result::Result<T, E>;
@@ -110,7 +113,23 @@ pub fn exec_nightwatch(script_path: &str, db_entry: &DBEntry, browser_type: &Str
             &db_entry.url_, &db_entry.username_, &db_entry.old_password_, &db_entry.new_password_], port)
 }
 
-pub fn get_script_name_check_blocklist(url: &String, blocklist: &Vec<String>) -> Result<String> {
+pub fn get_script_name_check_blocklist(url_provided: &String, blocklist: &Vec<String>, urls: &HashMap<String, String>) -> Result<String> {
+    if blocklist.contains(url_provided) {
+        return Err(Error::UrlDomainBlocked);
+    }
+    
+    let mut url = String::new();
+    for (key, value) in urls {
+        let re = Regex::new(&key).context(RegexLibError).context(RegexError { expr:key })?;
+        if re.is_match(url_provided) {
+            url = value.to_owned();
+            break;
+        }
+    }
+    if url.is_empty() {
+        url = url_provided.to_owned();
+    }
+    
     let mut url_;
     if !url.contains("https://") {
         url_ = "https://".to_owned();
@@ -123,21 +142,17 @@ pub fn get_script_name_check_blocklist(url: &String, blocklist: &Vec<String>) ->
 
     let mut target_domain = target_url.domain().ok_or(Error::UrlDomainError { url:url_.to_owned() })?.to_owned();
 
-    if blocklist.contains(&target_domain) {
-        return Err(Error::UrlDomainBlocked);
-    }
-
     target_domain.push_str(".js");
 
     return Ok(target_domain);
 }
 
-pub fn get_script_path(scripts: &Vec<Script>, blocklist: &Vec<String>, db_entry: &DBEntry) -> Result<String> {
-    for script in scripts {
+pub fn get_script_path(config: &Configuration, blocklist: &Vec<String>, db_entry: &DBEntry) -> Result<String> {
+    for script in config.scripts_.iter() {
         let mut script_path = PathBuf::new();
         script_path.push(&script.dir_);
 
-        let script_name = get_script_name_check_blocklist(&db_entry.url_, blocklist)?;
+        let script_name = get_script_name_check_blocklist(&db_entry.url_, blocklist, &config.urls_)?;
 
         script_path.push(&script_name);
         let path = script_path.to_str().ok_or(Error::ScriptPathError{ url:db_entry.url_.to_owned() })?.to_owned();
@@ -146,7 +161,7 @@ pub fn get_script_path(scripts: &Vec<Script>, blocklist: &Vec<String>, db_entry:
             continue;
         }
 
-        if script.blocklist_.contains(&path) {
+        if script.blocklist_.contains(&script_name) {
             return Err(Error::ScriptBlocked);
         }
         return Ok(path);
@@ -155,21 +170,19 @@ pub fn get_script_path(scripts: &Vec<Script>, blocklist: &Vec<String>, db_entry:
 }
 
 pub fn check_dependencies(config: &Configuration) -> Result<()> {
-    //TODO maybe allow user to set path to nightwatch
     let binary_name = "nightwatch";
     match which(binary_name) {
         Ok(_) => (),
         Err(_) => return Err(Error::DependencyMissingError { binary_name, program: "Nightwatch"})
-
     }
-    if config.browser_type_.eq("firefox") {
+    if config.browser_type_ == BrowserType::Firefox {
         let binary_name = "firefox";
         match which(binary_name) {
             Ok(_) => (),
             Err(_) => return Err(Error::DependencyMissingError { binary_name, program: "Firefox"})
 
         }
-    } else if config.browser_type_.eq("chrome") {
+    } else if config.browser_type_ == BrowserType::Chrome {
         let binary_name = "google-chrome";
         match which(binary_name) {
             Ok(_) => (),
@@ -188,12 +201,20 @@ pub fn check_port_available(port: u16) -> bool {
 }
 
 pub fn run_update_threads(db: &DB, blocklist: &Vec<String>, config: &Configuration, tx: Sender<ThreadResult>) -> usize {
-    let mut port = 4444u16;
+    let mut port;
+    let browser_type;
+    if config.browser_type_ == BrowserType::Firefox {
+        port = 4444u16;
+        browser_type = "firefox".to_owned();
+    } else {
+        port = 9515u16;
+        browser_type = "chrome".to_owned();
+    }
     let mut nr_jobs = 0usize;
     let pool = ThreadPool::new(config.nr_threads_);
     for db_entry in db.entries.iter() {
         let entry = db_entry.clone();
-        let script_path = match get_script_path(&config.scripts_, blocklist, &db_entry) {
+        let script_path = match get_script_path(config, blocklist, &db_entry) {
             Ok(path) => path,
             Err(utils::Error::UrlDomainBlocked) => continue,
             Err(utils::Error::ScriptBlocked) => continue,
@@ -202,21 +223,22 @@ pub fn run_update_threads(db: &DB, blocklist: &Vec<String>, config: &Configurati
                 continue;
             }
         };
-        
-        let browser_type = config.browser_type_.to_owned();
+
+        let browser_type_ = browser_type.clone();
         
         nr_jobs += 1;
         let tx = tx.clone();
         pool.execute(move || {
-            match exec_nightwatch(&script_path, &entry, &browser_type, &port.to_string()) {
+            match exec_nightwatch(&script_path, &entry, &browser_type_, &port.to_string()) {
                 Ok(output) => tx.send(ThreadResult::new(entry, Ok(output))).expect("Error: Thread could not send"),
                 Err(err) => tx.send(ThreadResult::new(entry, Err(err))).expect("Error: Thread could not send")
             };
         });
-        // TODO check if port available
-        //while !check_port_available(port) {
         port += 1;
-        //}
+        while !check_port_available(port) {
+            port += 1;
+        }
     }
+    pool.join();
     return nr_jobs;
 }

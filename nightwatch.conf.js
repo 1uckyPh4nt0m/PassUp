@@ -10,11 +10,12 @@ module.exports = {
     firefox: {
       desiredCapabilities : {
         browserName : 'firefox',
+        acceptSslCerts: true,
         alwaysMatch: {
           'moz:firefoxOptions': {
             args: [
                //'-headless',
-               //'-verbose'
+               '-verbose'
             ],
           }
         }
@@ -45,6 +46,7 @@ module.exports = {
       webdriver: {
         start_process: true,
         server_path: (Services.chromedriver ? Services.chromedriver.path : ''),
+        port: port,
         cli_args: [
           // --verbose
         ]

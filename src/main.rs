@@ -11,7 +11,6 @@ use clap::{Arg, App};
 use config::{parse_config};
 use utils::check_dependencies;
 
-//TODO: [urls] funktionalität hinzufügen
 //TODO: Beispiel Nightwatch scripts erstellen
 
 fn main() {

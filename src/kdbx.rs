@@ -2,11 +2,10 @@ extern crate kpdb;
 extern crate rpassword;
 
 use rpassword::read_password;
-use std::{fs};
+use std::fs;
 use std::str;
-
-use crate::{config::{Configuration, Source}, utils::{run_update_threads}};
-use crate::utils::{self, get_pw, DBEntry, DB};
+use crate::config::{Configuration, Source};
+use crate::utils::{self, get_pw, DBEntry, DB, run_update_threads};
 use kpdb::{CompositeKey, Database, Entry};
 use snafu::{ResultExt, Snafu};
 use std::sync::mpsc::channel;
@@ -30,7 +29,7 @@ enum Error {
     DbUpdateFailed { file: String, source: LibraryError },
     #[snafu(display("Could not open DB file \'{}\': {}", file, source))]
     OpenFailed { file: String, source: LibraryError },
-    UtilsLibError { source: LibraryError}
+    UtilsLibError { source: LibraryError }
 }
 
 type Result<T, E = Error> = std::result::Result<T, E>;
@@ -92,13 +91,10 @@ pub fn run(config: &Configuration) {
 }
 
 fn parse_db_entry(entry: &mut Entry) -> Result<DBEntry> {
-    let url = entry.url().unwrap_or("").to_owned();
+    let url = format!("https://{}", entry.url().ok_or(Error::UrlMissing)?.to_owned());
     let username = entry.username().unwrap_or("").to_owned();
     let old_pass = entry.password().unwrap_or("").to_owned();
 
-    if url.is_empty() {
-        return Err(Error::UrlMissing);
-    }
     if username.is_empty() || old_pass.is_empty() {
         return Err(Error::CredentialMissing { url });
     }
@@ -163,7 +159,8 @@ fn unlock_db(source: &Source) -> Result<Database> {
 
     println!("Please enter password for {} at {}", source.name_, source.file_);
     while password_wrong {
-        db_password = read_password().unwrap_or("".to_owned());
+        db_password = "password123".to_owned();
+        //db_password = read_password().unwrap_or("".to_owned());
         let key = CompositeKey::from_password(&db_password);
         let mut file = fs::File::open(&source.file_).context(IoError).context(OpenFailed { file: source.file_.to_owned() })?;
 

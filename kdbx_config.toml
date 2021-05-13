@@ -13,7 +13,7 @@ sources = [ "work-pass" ]   #optional
 [[sources]]
 name = "private-kdbx"
 file = "tests/resources/test_db.kdbx"
-blocklist = [ "google.com", "no-password-but-note" ]    #optional
+blocklist = [ "no-password-but-note" ]    #optional
 
 [[sources]]
 name = "work-pass"
@@ -21,11 +21,14 @@ blocklist = [ "google.com" ]    #optional
 
 [[scripts]]
 dir = "./scripts"
-blocklist = [ "live.com.js" ]   #optional
+blocklist = [ "live.com.js", "lichess.org.js", "chess.com.js", "myaccount.google.com.js" ]   #optional
 
 [urls]  #optional
-"([^/]{1,30}://)?[^/]+gmail.com(/$|/.*)" = "google.com.js"
-"skype.com/" = "live.com.js"
+"([^/]{1,30}://)?[^/]+@gmail.com$" = "myaccount.google.com"
+"gmail.com" = "myaccount.google.com"
+"youtube.com" = "myaccount.google.com"
+"google.com" = "myaccount.google.com"
+"skype.com/" = "live.com"
 "non-domain-name-in-DB-file" = ""
 
 [[scripts]]

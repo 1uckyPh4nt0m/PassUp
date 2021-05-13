@@ -4,9 +4,15 @@ use std::collections::HashMap;
 
 use snafu::{ResultExt, Snafu};
 
+#[derive(Debug, PartialEq)]
+pub enum BrowserType {
+    Firefox,
+    Chrome
+}
+
 #[derive(Debug)]
 pub struct Configuration {
-    pub browser_type_: String,
+    pub browser_type_: BrowserType,
     pub nr_threads_: usize,
     pub active_profile_: String,
     pub profile_: Profile,
@@ -16,7 +22,7 @@ pub struct Configuration {
 }
 
 impl Configuration {
-    pub fn new(browser_type_: String, nr_threads_: usize, active_profile_: String, profile_: Profile, sources_: Vec<Source>, scripts_: Vec<Script>, urls_: HashMap<String, String>) -> Self { Self { browser_type_, nr_threads_, active_profile_, profile_, sources_, scripts_, urls_ } }
+    pub fn new(browser_type_: BrowserType, nr_threads_: usize, active_profile_: String, profile_: Profile, sources_: Vec<Source>, scripts_: Vec<Script>, urls_: HashMap<String, String>) -> Self { Self { browser_type_, nr_threads_, active_profile_, profile_, sources_, scripts_, urls_ } }
 }
 
 
@@ -115,12 +121,17 @@ pub fn parse_config(path: &str) -> Result<Configuration> {
 
     let config: Value = toml::from_str(&config_str).context(ConfigWrongFormat { path })?;
 
-    let browser_type = config.get("browser_type")
+    let browser_type_s = config.get("browser_type")
                                     .ok_or(Error::ConfigBrowserTypeMissing)?.as_str()
                                     .ok_or(Error::ConfigBrowserTypeWrong)?.to_owned()
                                     .to_ascii_lowercase();
 
-    if !browser_type.eq("firefox") && !browser_type.eq("chrome") {
+    let browser_type;
+    if browser_type_s.eq("firefox") {
+        browser_type = BrowserType::Firefox;
+    } else if browser_type_s.eq("chrome") {
+        browser_type = BrowserType::Chrome;
+    } else {
         return Err(Error::ConfigBrowserTypeWrong);
     }
 
