@@ -83,7 +83,7 @@ dir = "./scripts"
 blocklist = [ "live.com.js" ]   #optional
 
 [urls]  #optional
-"([^/]{1,30}://)?[^/]+gmail.com(/$|/.*)" = "google.com.js"
+"([^/]{1,30}://)?[^/]+gmail.com(/$|/.*)" = "myaccount.google.com.js"
 "skype.com/" = "live.com.js"
 "non-domain-name-in-DB-file" = ""
 
