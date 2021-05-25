@@ -21,7 +21,7 @@ blocklist = [ "google.com" ]    #optional
 
 [[scripts]]
 dir = "./scripts"
-blocklist = [ "live.com.js", "lichess.org.js", "chess.com.js", "myaccount.google.com.js" ]   #optional
+blocklist = [ "live.com.js", "reddit.com.js", "myaccount.google.com.js" ]   #optional
 
 [urls]  #optional
 "([^/]{1,30}://)?[^/]+@gmail.com$" = "myaccount.google.com"

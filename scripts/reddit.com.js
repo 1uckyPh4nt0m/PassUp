@@ -11,6 +11,7 @@ module.exports = {
             .waitForElementPresent('partial link text', 'Log In')
             .click('partial link text', 'Log In')
             .waitForElementPresent('button[type=submit]')
+            .setValue('partial link text', 'Username', userName)
             .setValue('#loginUsername', userName)
             .setValue('#loginPassword', oldPasswd)
             .click('button[type=submit]')

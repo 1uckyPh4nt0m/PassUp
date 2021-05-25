@@ -10,6 +10,8 @@ module.exports = {
       	.waitForElementPresent('body')
 		.waitForElementPresent('partial link text', 'Go to Google Account')
 		.click('partial link text', 'Go to Google Account')
+		// .waitForElementPresent('partial link text', 'Email')
+		// .setValue('partial link text', 'Email', userName)
 		.waitForElementPresent('input[name=identifier]')
       	.setValue('input[name=identifier]', userName)
 		.click('button[type=button]')

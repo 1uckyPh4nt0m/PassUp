@@ -8,10 +8,8 @@ extern crate clap;
 extern crate which;
 
 use clap::{Arg, App};
-use config::{parse_config};
+use config::parse_config;
 use utils::check_dependencies;
-
-//TODO: Beispiel Nightwatch scripts erstellen
 
 fn main() {
     let matches = App::new("PassUp")
