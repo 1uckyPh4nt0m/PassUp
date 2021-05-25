@@ -27,3 +27,10 @@ tests_output/
 reports/CHROME_90.0.4430.85_Linux_chess.com.xml
 reports/FIREFOX_88.0_5.4.0-54-generic_chess.com.xml
 reports/FIREFOX_88.0_5.4.0-54-generic_lichess.org.xml
+reports/CHROME_90.0.4430.85_Linux_lichess.org.xml
+reports/CHROME_90.0.4430.85_Linux_myaccount.google.com.xml
+reports/CHROME_90.0.4430.85_Linux_reddit.com.xml
+reports/FIREFOX_88.0_5.4.0-54-generic_google.com.xml
+reports/FIREFOX_88.0_5.4.0-54-generic_myaccount.google.com.xml
+reports/FIREFOX_88.0_5.4.0-54-generic_reddit.com.xml
+reports/reddit.com.xml
