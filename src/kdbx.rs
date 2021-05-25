@@ -166,8 +166,7 @@ fn unlock_db(source: &Source) -> Result<Database> {
 
     println!("Please enter password for {} at {}", source.name_, source.file_);
     while password_wrong {
-        db_password = "password123".to_owned();
-        //db_password = read_password().unwrap_or("".to_owned());
+        db_password = read_password().unwrap_or("".to_owned());
         let key = CompositeKey::from_password(&db_password);
         let mut file = fs::File::open(&source.file_).context(IoError).context(OpenFailed { file: source.file_.to_owned() })?;
 
