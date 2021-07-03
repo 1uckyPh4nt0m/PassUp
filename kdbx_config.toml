@@ -13,15 +13,11 @@ sources = [ "work-pass" ]   #optional
 [[sources]]
 name = "private-kdbx"
 file = "tests/resources/test_db.kdbx"
-blocklist = [ "no-password-but-note" ]    #optional
-
-[[sources]]
-name = "work-pass"
-blocklist = [ "google.com" ]    #optional
+blocklist = [ "lichess.org", "chess.com", "github.com" ]    #optional
 
 [[scripts]]
 dir = "./scripts"
-blocklist = [ "live.com.js", "reddit.com.js", "myaccount.google.com.js" ]   #optional
+blocklist = [ "live.com.js", "myaccount.google.com.js" ]   #optional
 
 [urls]  #optional
 "([^/]{1,30}://)?[^/]+@gmail.com$" = "myaccount.google.com"

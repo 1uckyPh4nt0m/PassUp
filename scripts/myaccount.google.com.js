@@ -1,3 +1,5 @@
+//Google does not work since Google recognizes that the browser is controlled through a WebDriver
+
 module.exports = {
 'google.com' : function(browser) {
 	const url = process.argv[6];
