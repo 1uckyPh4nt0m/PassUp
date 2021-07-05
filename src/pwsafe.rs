@@ -27,7 +27,7 @@ pub fn test() {
             continue;
         }
         //println!("Read field of type {} and length {}", field_type, field_data.len());
-        let record = match pwsafe::PwsafeRecordField::new(field_type, field_data.clone()) {
+        let record = match PwsafeRecordField::new(field_type, field_data.clone()) {
             Ok(r) => r,
             Err(e) => { println!("{}", e); continue }
         };
@@ -37,7 +37,7 @@ pub fn test() {
             PwsafeRecordField::Username(username) => entry.username_ = username.to_owned(),
             PwsafeRecordField::Password(password) => entry.old_password_ = password.to_owned(),
             PwsafeRecordField::Uuid(uuid) => entry.uuid_ = Uuid::Pwsafe(uuid.to_owned()),
-            pwsafe::PwsafeRecordField::EndOfRecord => entry = DBEntry::empty(),
+            PwsafeRecordField::EndOfRecord => entry = DBEntry::empty(),
             _ => entry = DBEntry::empty()
         };
 
