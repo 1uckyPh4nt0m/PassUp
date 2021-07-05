@@ -17,6 +17,8 @@ snafu = "0.6.10"
 which = "4.1.0"
 threadpool = "1.8.1"
 regex = "1.5.3"
+pwsafe = "0.1.2"
+cryptex = "1.0.0"
 [dependencies.passwords]
 version = "3.1.4"
 features = ["crypto"]

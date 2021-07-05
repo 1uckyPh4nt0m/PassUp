@@ -5,7 +5,7 @@ use rpassword::read_password;
 use std::fs;
 use std::str;
 use crate::config::{Configuration, Source};
-use crate::utils::{self, get_pw, DBEntry, DB, run_update_threads};
+use crate::utils::{self, get_pw, DBEntry, DB, run_update_threads, Uuid};
 use kpdb::{CompositeKey, Database, Entry};
 use snafu::{ResultExt, Snafu};
 use std::sync::mpsc::channel;
@@ -29,6 +29,8 @@ enum Error {
     DbUpdateFailed { file: String, source: LibraryError },
     #[snafu(display("Could not open DB file \'{}\': {}", file, source))]
     OpenFailed { file: String, source: LibraryError },
+    #[snafu(display("Entry has wrong uuid type"))]
+    WrongUuidType,
     UtilsLibError { source: LibraryError }
 }
 
@@ -70,7 +72,14 @@ pub fn run(config: &Configuration) {
                 new_entry.set_url(&db_entry.url_);
                 new_entry.set_username(&db_entry.username_);
                 new_entry.set_password(&db_entry.new_password_);
-                (&mut kpdb_db).root_group.remove_entry(db_entry.uuid);
+                let uuid = match db_entry.uuid_ {
+                    Uuid::Kdbx(id) => id,
+                    _ => {
+                        eprintln!("{:?}", WrongUuidType);
+                        continue;
+                    }
+                };
+                (&mut kpdb_db).root_group.remove_entry(uuid);
                 (&mut kpdb_db).root_group.add_entry(new_entry);
                 println!("Updated password on website {}, with username {}", db_entry.url_, db_entry.username_);
             } else {
@@ -106,7 +115,7 @@ fn parse_db_entry(entry: &mut Entry) -> Result<DBEntry> {
         return Err(Error::CredentialMissing { url });
     }
 
-    return Ok(DBEntry::new(url, username, old_pass, "".to_owned(), entry.uuid));
+    return Ok(DBEntry::new(url, username, old_pass, "".to_owned(), Uuid::Kdbx(entry.uuid)));
 }
 
 fn parse_kdbx_db(db: &Database) -> Result<DB> {

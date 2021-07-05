@@ -1,5 +1,7 @@
 mod pass;
 mod kdbx;
+mod pwsafe;
+mod keyring;
 mod config;
 mod utils;
 
@@ -12,6 +14,9 @@ use config::parse_config;
 use utils::check_dependencies;
 
 fn main() {
+    //keyring::test();
+    pwsafe::test();
+
     let matches = App::new("PassUp")
                             .version("0.1")
                             .author("Gabriel V. <gabriel.vukovic@student.tugraz.com>")
