@@ -1,7 +1,6 @@
 mod pass;
 mod kdbx;
 mod pwsafe;
-mod keyring;
 mod config;
 mod utils;
 
@@ -15,7 +14,7 @@ use utils::check_dependencies;
 
 fn main() {
     //keyring::test();
-    pwsafe::test();
+    //pwsafe::test();
 
     let matches = App::new("PassUp")
                             .version("0.1")
@@ -52,5 +51,7 @@ fn main() {
         kdbx::run(&config);
     } else if config.profile_.type_.eq("pass") {
         pass::run(&config);
+    } else if config.profile_.type_.eq("pwsafe") {
+        pwsafe::run(&config);
     }
 }

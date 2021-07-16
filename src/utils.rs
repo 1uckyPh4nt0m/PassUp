@@ -18,7 +18,7 @@ use regex::Regex;
 const FIREFOX_PORT: u16 = 4444;
 const CHROME_PORT: u16 = 9515;
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum Uuid {
     None,
     Kdbx(EntryUuid),
@@ -61,7 +61,7 @@ pub enum Error {
     PasswordGeneratorError { err: &'static str },
     #[snafu(display("Could not execute command \'{}{}\': {}", program, args, source))]
     CmdError { program: &'static str, args: String, source: LibraryError },
-    #[snafu(display("Could not parse URL \'{}\' with error {}", url, source))]
+    #[snafu(display("Could not parse URL \'{}\' with {}", url, source))]
     UrlParseError { url: String, source: LibraryError },
     #[snafu(display("URL does not contain a domain name: {}", url))]
     UrlDomainError { url: String },
@@ -95,7 +95,7 @@ pub fn get_pw() -> Result<String> {
         numbers: true,
         lowercase_letters: true,
         uppercase_letters: true,
-        symbols: false,
+        symbols: true,
         strict: true,
         exclude_similar_characters: true,
         spaces: false,

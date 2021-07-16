@@ -19,7 +19,7 @@ pub enum Error {
     HomeDirError,
     #[snafu(display("Path is not a valid unicode string"))]
     PathToStrError,
-    #[snafu(display("Could not read directory: \'{}\' with error: {}", path, source))]
+    #[snafu(display("Could not read directory: \'{}\' with: {}", path, source))]
     PassStoreNotFound { path: String, source: LibraryError },
     #[snafu(display("Password generation is not working"))]
     PassGenError { source: LibraryError },

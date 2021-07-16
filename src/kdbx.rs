@@ -25,7 +25,7 @@ enum Error {
     UrlMissing,
     #[snafu(display("Credentials are incomplete for website \'{}\'", url))]
     CredentialMissing { url: String },
-    #[snafu(display("Could not update \'{}\' with error {}", file, source))]
+    #[snafu(display("Could not update \'{}\' with {}", file, source))]
     DbUpdateFailed { file: String, source: LibraryError },
     #[snafu(display("Could not open DB file \'{}\': {}", file, source))]
     OpenFailed { file: String, source: LibraryError },
@@ -150,9 +150,7 @@ fn print_db_content(db: &Database) {
 
 fn update_db(source: &Source, db_: &Database) -> Result<()> {
     let mut db = db_.clone();
-    let err = DbUpdateFailed {
-        file: source.file_.to_owned(),
-    };
+    let err = DbUpdateFailed { file: source.file_.to_owned() };
     std::fs::remove_file(&source.file_).context(IoError).context(err.clone())?;
     let mut file = fs::File::create(&source.file_).context(IoError).context(err.clone())?;
     (&mut db).save(&mut file).context(KpdbError).context(err)?;
@@ -196,7 +194,7 @@ fn unlock_db(source: &Source) -> Result<Database> {
                 return Err(Error::OpenFailed {
                     file: source.file_.to_owned(),
                     source: LibraryError::KpdbError { source: err },
-                })
+                });
             }
         };
     }

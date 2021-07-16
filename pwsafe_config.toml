@@ -1,4 +1,4 @@
-active_profile = "my-private-keepassx"
+active_profile = "pwsafe"
 browser_type = "firefox"
 nr_threads = 10  #optional default: 1
 
