@@ -1,4 +1,6 @@
-use pwsafe::{self, PwsafeReader, PwsafeWriter, PwsafeRecordField};
+extern crate pwsafe;
+
+use pwsafe::{PwsafeReader, PwsafeWriter, PwsafeRecordField};
 use std::fs::{self, File};
 use std::io::{BufReader, BufWriter};
 use std::sync::mpsc::channel;

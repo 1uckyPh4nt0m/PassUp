@@ -1,6 +1,6 @@
 mod pass;
 mod kdbx;
-mod pwsafe;
+mod passwsafe;
 mod config;
 mod utils;
 
@@ -49,6 +49,6 @@ fn main() {
     } else if config.profile_.type_.eq("pass") {
         pass::run(&config);
     } else if config.profile_.type_.eq("pwsafe") {
-        pwsafe::run(&config);
+        passwsafe::run(&config);
     }
 }
