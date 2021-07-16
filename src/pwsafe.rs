@@ -69,6 +69,7 @@ pub fn run(config: &Configuration) {
                 eprintln!("{}", err);
                 db_entry.new_password_ = db_entry.old_password_.to_owned();
             }
+            println!("Updated password on website {}, with username {}", db_entry.url_, db_entry.username_);
             updated_entries.push(db_entry);
         }
 
@@ -176,13 +177,11 @@ pub fn unlock_and_parse_db(source: &Source) -> Result<(DB, String, u16, Vec<(u8,
 }
 
 pub fn update_db(source: &Source, db: &DB, db_password: String, records: Vec<(u8, Vec<u8>)>, version: u16) -> Result<()> {
+    let err = DbUpdateFailed { file: source.file_.to_owned() };
+
     let filename = source.file_.to_owned();
     let filename_copy = format!("{}_copy", &filename);
-    match fs::rename(&filename, filename_copy) {
-        Ok(_) => (),
-        Err(e) => panic!("{}", e)
-    };
-    let err = DbUpdateFailed { file: source.file_.to_owned() };
+    fs::rename(&filename, &filename_copy).context(IoError).context(err.clone())?;
     let file = BufWriter::new(File::create(filename).context(IoError).context(err.clone())?);
     let mut psdb = PwsafeWriter::new(file, 2048, db_password.as_bytes()).context(IoError).context(err.clone())?;
     let empty = [0u8, 0];
@@ -216,5 +215,6 @@ pub fn update_db(source: &Source, db: &DB, db_password: String, records: Vec<(u8
     }
 
     psdb.finish().context(IoError).context(err.clone())?; // EOF and HMAC
+    fs::remove_file(&filename_copy).context(IoError).context(err.clone())?;
     return Ok(());
 }
