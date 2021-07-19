@@ -3,6 +3,7 @@ mod kdbx;
 mod passwsafe;
 mod config;
 mod utils;
+mod chrome;
 
 extern crate snafu;
 extern crate clap;
@@ -13,6 +14,9 @@ use config::parse_config;
 use utils::check_dependencies;
 
 fn main() {
+
+    chrome::test();
+
     let matches = App::new("PassUp")
                             .version("0.1")
                             .author("Gabriel V. <gabriel.vukovic@student.tugraz.com>")
