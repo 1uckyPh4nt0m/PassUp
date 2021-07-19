@@ -10,8 +10,8 @@ struct Login {
 }
 
 pub fn test() {
-    let path = "/home/gabriel/.config/google-chrome/Default/Login Data";
-    //let path = "/home/gabriel/.config/chromium/Default/Login Data";
+    //let path = "/home/gabriel/.config/google-chrome/Default/Login Data";
+    let path = "/home/gabriel/.config/chromium/Default/Login Data";
     let db = Connection::open(&path).unwrap();
 
     let mut stmt = db.prepare("SELECT action_url, username_value, password_value FROM logins").unwrap();
@@ -34,9 +34,10 @@ pub fn test() {
         let salt = b"saltysalt";
         let iv = [32u8; 16];
         let iterations = 1;
-        let pass = b"peanuts";
+        //let pass = b"peanuts";
+        let pass = b"";
 
-        let mut key = [0u8; 16];
+        let mut key = [32u8; 16];
         pbkdf2_hmac(pass, salt, iterations, hash::MessageDigest::sha1(), &mut key).unwrap();
         let cipher = Cipher::new_128(&key);
         let decrypted_u8 = cipher.cbc_decrypt(&iv, &encrypted_password);
