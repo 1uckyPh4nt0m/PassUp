@@ -114,8 +114,9 @@ fn parse_db_entry(entry: &mut Entry) -> Result<DBEntry> {
     if username.is_empty() || old_pass.is_empty() {
         return Err(Error::CredentialMissing { url });
     }
-
-    return Ok(DBEntry::new(url, username, old_pass, "".to_owned(), Uuid::Kdbx(entry.uuid)));
+    let mut dbentry = DBEntry::new(url, username, old_pass, "".to_owned());
+    dbentry.uuid_ = Uuid::Kdbx(entry.uuid);
+    return Ok(dbentry);
 }
 
 fn parse_kdbx_db(db: &Database) -> Result<DB> {

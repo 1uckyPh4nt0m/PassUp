@@ -5,6 +5,8 @@ Automatically update passwords from common Password Managers. Supported Password
 - [KeePass](https://keepass.info/)(kdbx)
 - [KeePassX](https://www.keepassx.org/)(kdbx)
 - [KeePassXC](https://keepassxc.org/)(kdbx)
+- [PasswordSafe](https://pwsafe.org/)(psafe3)
+- [Chrome](https://www.google.com/intl/de/chrome/)(sqlite)
 
 ## Getting Started
 ### Prerequisites
@@ -33,6 +35,17 @@ Automatically update passwords from common Password Managers. Supported Password
 4. Install [Rust](https://www.rust-lang.org/tools/install):
     ```
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+    ```
+
+5. Optional for Chrome password manager
+
+1. Install Openssl(needed if using Chrome password manager)
+    ```
+    sudo apt install libssl-dev
+    ```
+2. Install Sqlite
+    ```
+    sudo apt install libsqlite3-dev
     ```
 
 ## Program Usage

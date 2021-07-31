@@ -10,13 +10,6 @@ pub enum BrowserType {
     Chrome
 }
 
-#[derive(Debug, PartialEq)]
-pub enum ProfileType {
-    Kdbx,
-    Pass,
-    Pwsafe
-}
-
 #[derive(Debug)]
 pub struct Configuration {
     pub browser_type_: BrowserType,
@@ -212,7 +205,7 @@ fn parse_profile(profile: &Value) -> Result<Profile> {
     let type_v = profile.get("type").ok_or(Error::ProfileTypeMissing)?;
     let type_s = type_v.to_string().replace("\"", "");
    
-    if type_s.ne("kdbx") && type_s.ne("pass") && type_s.ne("pwsafe") {
+    if type_s.ne("kdbx") && type_s.ne("pass") && type_s.ne("pwsafe") && type_s.ne("chrome") {
         return Err(Error::ProfileTypeWrong);
     }
 
@@ -238,7 +231,7 @@ fn parse_source(source: &Value, profile: &Profile) -> Result<Source> {
     let file = match source.get("file") {
         Some(file) => file.to_string().replace("\"", ""),
         None => {
-            if profile.type_.eq("kdbx") || profile.type_.eq("pwsafe") {
+            if profile.type_.eq("kdbx") || profile.type_.eq("pwsafe") || profile.type_.eq("chrome") {
                 return Err(Error::SourcesFileMissing);
             }
             "".to_owned()

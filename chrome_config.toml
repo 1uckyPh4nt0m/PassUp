@@ -1,0 +1,49 @@
+active_profile = "chrome-pwm"
+browser_type = "firefox"
+nr_threads = 10  #optional default: 1
+
+[profile.my-private-keepassx]
+type = "kdbx"
+sources = [ "private-kdbx" ]
+
+[[sources]]
+name = "private-kdbx"
+file = "tests/resources/test_db.kdbx"
+blocklist = [ "lichess.org", "chess.com", "github.com" ]    #optional
+
+[profile.work-pass]
+type = "pass"
+sources = [ "work-pass" ]   #optional
+
+[profile.pwsafe]
+type = "pwsafe"
+sources = [ "pwsafe" ]
+
+[[sources]]
+name = "pwsafe"
+file = "tests/resources/pwsafe.psafe3"
+blocklist = [ "chess.com", "github.com" ]    #optional
+
+[profile.chrome-pwm]
+type = "chrome"
+sources = [ "chrome" ]
+
+[[sources]]
+name = "chrome"
+file = "/home/gabriel/.config/google-chrome/Default/Login Data"
+blocklist = [ "chess.com", "github.com" ]    #optional
+
+[[scripts]]
+dir = "./scripts"
+blocklist = [ "live.com.js", "myaccount.google.com.js" ]   #optional
+
+[urls]  #optional
+"([^/]{1,30}://)?[^/]+@gmail.com$" = "myaccount.google.com"
+"gmail.com" = "myaccount.google.com"
+"youtube.com" = "myaccount.google.com"
+"google.com" = "myaccount.google.com"
+"skype.com/" = "live.com"
+"non-domain-name-in-DB-file" = ""
+
+[[scripts]]
+dir = "development/my-custom-PassUp-scripts"

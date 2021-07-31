@@ -21,8 +21,7 @@ const CHROME_PORT: u16 = 9515;
 #[derive(Debug, Clone, PartialEq)]
 pub enum Uuid {
     None,
-    Kdbx(EntryUuid),
-    Pwsafe([u8; 16])
+    Kdbx(EntryUuid)
 } 
 
 #[derive(Debug, Clone)]
@@ -35,8 +34,7 @@ pub struct DBEntry {
 }
 
 impl DBEntry {
-    pub fn new(url_: String, username_: String, old_password_: String, new_password_: String, uuid_: Uuid) -> Self { Self { url_, username_, old_password_, new_password_, uuid_ } }
-    pub fn empty() -> Self { Self { url_: "".to_owned(), username_: "".to_owned(), old_password_: "".to_owned(), new_password_: "".to_owned(), uuid_ : Uuid::None} }
+    pub fn new(url_: String, username_: String, old_password_: String, new_password_: String) -> Self { Self { url_, username_, old_password_, new_password_, uuid_: Uuid::None} }
 }
 
 #[derive(Debug)]

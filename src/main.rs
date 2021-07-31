@@ -1,6 +1,5 @@
 mod pass;
 mod kdbx;
-mod passwsafe;
 mod config;
 mod utils;
 mod chrome;
@@ -14,9 +13,6 @@ use config::parse_config;
 use utils::check_dependencies;
 
 fn main() {
-
-    chrome::test();
-
     let matches = App::new("PassUp")
                             .version("0.1")
                             .author("Gabriel V. <gabriel.vukovic@student.tugraz.com>")
@@ -52,7 +48,7 @@ fn main() {
         kdbx::run(&config);
     } else if config.profile_.type_.eq("pass") {
         pass::run(&config);
-    } else if config.profile_.type_.eq("pwsafe") {
-        passwsafe::run(&config);
+    } else if config.profile_.type_.eq("chrome") {
+        chrome::run(&config);
     }
 }

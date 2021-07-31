@@ -160,7 +160,7 @@ fn parse_pass() -> Result<utils::DB> {
             let mut url_ = "https://".to_owned();
             url_.push_str(&url);
             let new_password = utils::get_pw().context(UtilsError).context(PassGenError)?;
-            let entry = utils::DBEntry::new(url_.clone(), username, password, new_password, utils::Uuid::None);
+            let entry = utils::DBEntry::new(url_.clone(), username, password, new_password);
             db.push(entry);
         }
     }
