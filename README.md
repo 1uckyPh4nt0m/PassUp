@@ -12,6 +12,17 @@ Automatically update passwords from common Password Managers. Supported Password
 ### Prerequisites
 1. Install Node.js. Please refer to https://nodejs.org/en/download/ for more information.
 
+    ```
+    sudo apt install nodejs nodejs-legacy
+    ```
+
+Install Node Package Manager: 
+
+    ```
+    sudo apt install npm
+    ```
+
+
 2. Install [Nightwatch](https://nightwatchjs.org/gettingstarted/installation/):
     ```
     npm install -g nightwatch
@@ -41,7 +52,7 @@ Automatically update passwords from common Password Managers. Supported Password
 
 1. Install Openssl(needed if using Chrome password manager)
     ```
-    sudo apt install libssl-dev
+    sudo apt install libssl-dev pkg-config
     ```
 2. Install Sqlite
     ```
