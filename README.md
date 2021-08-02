@@ -10,16 +10,10 @@ Automatically update passwords from common Password Managers. Supported Password
 
 ## Getting Started
 ### Prerequisites
-1. Install Node.js. Please refer to https://nodejs.org/en/download/ for more information.
+1. Install Node.js and Node package manager. Please refer to https://nodejs.org/en/download/ for more information.
 
     ```
-    sudo apt install nodejs nodejs-legacy
-    ```
-
-Install Node Package Manager: 
-
-    ```
-    sudo apt install npm
+    sudo apt install nodejs npm
     ```
 
 
@@ -50,13 +44,9 @@ Install Node Package Manager:
 
 5. Optional for Chrome password manager
 
-1. Install Openssl(needed if using Chrome password manager)
+    Install Openssl and Sqlite(needed if using Chrome password manager)
     ```
-    sudo apt install libssl-dev pkg-config
-    ```
-2. Install Sqlite
-    ```
-    sudo apt install libsqlite3-dev
+    sudo apt install libssl-dev pkg-config libsqlite3-dev
     ```
 
 ## Program Usage
