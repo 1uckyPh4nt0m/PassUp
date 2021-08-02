@@ -95,9 +95,9 @@ fn cipher(encrypt: bool, text: Vec<u8>, version: &Vec<u8>) -> Result<Vec<u8>> {
     let iterations = 1;
     let pass;
     if version == b"v10" {
-        pass = b"peanuts".to_ascii_lowercase();
+        pass = b"peanuts".to_vec();
     } else {    //add check for gnome or kwallet
-        pass = b"".to_ascii_lowercase();
+        pass = b"".to_vec();
     }
 
     let mut key = [32u8; 16];
@@ -150,14 +150,8 @@ fn update_db(source: &Source, db: &DB, version: Vec<u8>) -> Result<()> {
 
     for entry in &db.entries {
         let password_u8 = cipher(true, entry.new_password_.as_bytes().to_vec(), &version)?;
-        //let password = std::str::from_utf8(&password_u8).context(Utf8Error).context(StringConversionError)?;
-
-        //let query = format!("UPDATE logins SET password_value = ? WHERE action_url = {} AND username_value = {}", &entry.url_, &entry.username_);
         let mut query = sql_db.prepare("UPDATE logins SET password_value = ? WHERE action_url = ? AND username_value = ?").context(SqliteError).context(SqlQueryError)?;
-        //let mut stmt = sql_db.prepare(&query).context(SqliteError).context(SqlStatementError)?;
-        //let _rows = stmt.query([]).context(SqliteError).context(SqlStatementError)?;
         query.execute(params![password_u8, entry.url_, entry.username_]).context(SqliteError).context(SqlQueryError)?;
-        //sql_db.execute(query, [&password_u8, &entry.url_.as_bytes().to_vec(), &entry.username_.as_bytes().to_vec()]).context(SqliteError).context(SqlQueryError)?;
     }
 
     Ok(())
