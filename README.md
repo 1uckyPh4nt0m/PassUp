@@ -44,7 +44,7 @@ Automatically update passwords from common Password Managers. Supported Password
 
 5. Optional for Chrome password manager
 
-    Install Openssl and Sqlite(needed if using Chrome password manager)
+    Install Openssl and Sqlite
     ```
     sudo apt install libssl-dev pkg-config libsqlite3-dev
     ```

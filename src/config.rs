@@ -25,15 +25,39 @@ impl Configuration {
     pub fn new(browser_type_: BrowserType, nr_threads_: usize, active_profile_: String, profile_: Profile, sources_: Vec<Source>, scripts_: Vec<Script>, urls_: HashMap<String, String>) -> Self { Self { browser_type_, nr_threads_, active_profile_, profile_, sources_, scripts_, urls_ } }
 }
 
+#[derive(Debug, PartialEq, Clone)]
+pub enum ProfileTypes {
+    Kdbx,
+    Pass,
+    Pwsafe,
+    ChromeG,
+    ChromeK,
+}
+
+impl ProfileTypes {
+    pub fn as_str(&self) -> &'static str {
+        if self.eq(&ProfileTypes::Kdbx) { 
+            return "kdbx" 
+        } else if self.eq(&ProfileTypes::Pass) { 
+            return "pass" 
+        } else if self.eq(&ProfileTypes::Pwsafe) { 
+            return "pwsafe" 
+        } else if self.eq(&ProfileTypes::ChromeG) { 
+            return "chrome-gnome" 
+        } else {
+            return "chrome-kde"
+        }
+    }
+}
 
 #[derive(Debug)]
 pub struct Profile {
-    pub type_: String,
+    pub type_: ProfileTypes,
     pub sources_: Vec<String>
 }
 
 impl Profile {
-    pub fn new(type_: String, sources_: Vec<String>) -> Self { Self { type_, sources_ } }
+    pub fn new(type_: ProfileTypes, sources_: Vec<String>) -> Self { Self { type_, sources_ } }
 }
 
 
@@ -58,6 +82,9 @@ pub struct Script {
 impl Script {
     pub fn new(dir_: String, blocklist_: Vec<String>) -> Self { Self { dir_, blocklist_ } }
 }
+
+const ALLOWED_PROFILE_TYPES: [&'static str; 5] = ["kdbx", "pass", "pwsafe", "chrome-gnome", "chrome-kde"];
+const PROFILE_TYPES_WITH_SOURCE: [&'static str; 4] = ["kdbx", "pwsafe", "chrome-gnome", "chrome-kde"];
 
 #[derive(Debug, Snafu)]
 pub enum Error {
@@ -151,7 +178,7 @@ pub fn parse_config(path: &str) -> Result<Configuration> {
     let sources_v = match config.get("sources") {
         Some(source) => source,
         None => {
-            if profile.type_.eq("kdbx") {
+            if profile.type_.eq(&ProfileTypes::Kdbx) {
                 return Err(Error::SourcesNotFound { path:path.to_owned() });
             }
             &temp
@@ -201,11 +228,23 @@ pub fn parse_config(path: &str) -> Result<Configuration> {
     return Ok(Configuration::new(browser_type, nr_threads, active_profile, profile, sources, scripts, urls));
 }
 
+fn create_profiletype_map() -> HashMap<String, ProfileTypes> {
+    let mut ProfileMap = HashMap::new();
+    ProfileMap.insert("kdbx".to_owned(), ProfileTypes::Kdbx);
+    ProfileMap.insert("pass".to_owned(), ProfileTypes::Pass);
+    ProfileMap.insert("pwsafe".to_owned(), ProfileTypes::Pwsafe);
+    ProfileMap.insert("chrome-gnome".to_owned(), ProfileTypes::ChromeG);
+    ProfileMap.insert("chrome-kde".to_owned(), ProfileTypes::ChromeK);
+
+    return ProfileMap;
+}
+
 fn parse_profile(profile: &Value) -> Result<Profile> {
     let type_v = profile.get("type").ok_or(Error::ProfileTypeMissing)?;
-    let type_s = type_v.to_string().replace("\"", "");
+    let type_S = type_v.to_string().replace("\"", "");
+    let type_s = type_S.as_str();
    
-    if type_s.ne("kdbx") && type_s.ne("pass") && type_s.ne("pwsafe") && type_s.ne("chrome") {
+    if !ALLOWED_PROFILE_TYPES.contains(&type_s) {
         return Err(Error::ProfileTypeWrong);
     }
 
@@ -216,8 +255,10 @@ fn parse_profile(profile: &Value) -> Result<Profile> {
     for s in sources_v {
         sources.push(s.to_string().replace("\"", ""));
     }
-   
-    return Ok(Profile::new(type_s, sources));
+
+    let profile_type_map = create_profiletype_map();
+    let type_ = profile_type_map.get(type_s).unwrap();
+    return Ok(Profile::new((*type_).clone(), sources));
 }
 
 fn parse_source(source: &Value, profile: &Profile) -> Result<Source> {
@@ -231,7 +272,7 @@ fn parse_source(source: &Value, profile: &Profile) -> Result<Source> {
     let file = match source.get("file") {
         Some(file) => file.to_string().replace("\"", ""),
         None => {
-            if profile.type_.eq("kdbx") || profile.type_.eq("pwsafe") || profile.type_.eq("chrome") {
+            if PROFILE_TYPES_WITH_SOURCE.contains(&&profile.type_.as_str()) {
                 return Err(Error::SourcesFileMissing);
             }
             "".to_owned()
