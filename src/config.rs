@@ -113,7 +113,7 @@ pub enum Error {
     ProfileAPNotPresent { path: String },
     #[snafu(display("Profile type missing"))]
     ProfileTypeMissing,
-    #[snafu(display("Wrong profile, has to be either \'kdbx\' or \'pass\'"))]
+    #[snafu(display("Wrong profile type, choose one of the following: {:?}", ALLOWED_PROFILE_TYPES))]
     ProfileTypeWrong,
     #[snafu(display("Profile does not contain sources"))]
     ProfileSourcesMissing,
