@@ -100,14 +100,7 @@ pub fn run(config: &Configuration) {
 }
 
 fn parse_db_entry(entry: &mut Entry) -> Result<DBEntry> {
-    let url_provided = entry.url().ok_or(Error::UrlMissing)?;
-    let mut url;
-    if !url_provided.starts_with("https://") {
-        url = "https://".to_owned();
-        url.push_str(&url_provided);
-    } else {
-        url = url_provided.to_owned();
-    }
+    let url = entry.url().ok_or(Error::UrlMissing)?.to_owned();
     let username = entry.username().unwrap_or("").to_owned();
     let old_pass = entry.password().unwrap_or("").to_owned();
 

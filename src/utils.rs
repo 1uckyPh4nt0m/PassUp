@@ -116,10 +116,11 @@ pub fn cmd(program: &'static str, args: &[&str], port: &str) -> Result<Output> {
         .output().context(IoError).context(CmdError {program, args:args_s});
 }
 
-pub fn exec_nightwatch(script_path: &str, url: &str, db_entry: &DBEntry, browser_type: &String, port: &String) -> Result<Output> {
+//pub fn exec_nightwatch(script_path: &str, url: &str, db_entry: &DBEntry, browser_type: &String, port: &String) -> Result<Output> {
+pub fn exec_nightwatch(script_path: &str, db_entry: &DBEntry, browser_type: &String, port: &String) -> Result<Output> {
     cmd("nightwatch", 
             &["--env", browser_type, "--test", script_path, 
-            &url, &db_entry.username_, &db_entry.old_password_, &db_entry.new_password_], port)
+            &db_entry.username_, &db_entry.old_password_, &db_entry.new_password_], port)
 }
 
 fn get_url_check_source_blocklist(url_: &String, blocklist: &Vec<String>, urls: &HashMap<String, String>) -> Result<String> {
@@ -142,7 +143,7 @@ fn get_url_check_source_blocklist(url_: &String, blocklist: &Vec<String>, urls: 
     return Ok(url);
 }
 
-pub fn get_url_and_script_path(config: &Configuration, blocklist: &Vec<String>, db_entry: &DBEntry) -> Result<(String, String)> {
+pub fn get_url_and_script_path(config: &Configuration, blocklist: &Vec<String>, db_entry: &DBEntry) -> Result<String> {
     for script in config.scripts_.iter() {
         let mut script_path = PathBuf::new();
         script_path.push(&script.dir_);
@@ -160,7 +161,7 @@ pub fn get_url_and_script_path(config: &Configuration, blocklist: &Vec<String>, 
         if script.blocklist_.contains(&script_name) {
             return Err(Error::ScriptBlocked);
         }
-        return Ok((format!("https://{}", url), path));
+        return Ok(path);
     }
     return Err(Error::ScriptPathError{ url:db_entry.url_.to_owned() });
 }
@@ -210,7 +211,7 @@ pub fn run_update_threads(db: &DB, blocklist: &Vec<String>, config: &Configurati
     let pool = ThreadPool::new(config.nr_threads_);
     for db_entry in db.entries.iter() {
         let entry = db_entry.clone();
-        let (url, script_path) = match get_url_and_script_path(config, blocklist, &db_entry) {
+        let script_path = match get_url_and_script_path(config, blocklist, &db_entry) {
             Ok(url_path) => url_path,
             Err(utils::Error::UrlDomainBlocked) => continue,
             Err(utils::Error::ScriptBlocked) => continue,
@@ -225,7 +226,7 @@ pub fn run_update_threads(db: &DB, blocklist: &Vec<String>, config: &Configurati
         nr_jobs += 1;
         let tx = tx.clone();
         pool.execute(move || {
-            match exec_nightwatch(&script_path, &url, &entry, &browser_type_, &port.to_string()) {
+            match exec_nightwatch(&script_path, &entry, &browser_type_, &port.to_string()) {
                 Ok(output) => tx.send(ThreadResult::new(entry, Ok(output))).expect("Error: Thread could not send"),
                 Err(err) => tx.send(ThreadResult::new(entry, Err(err))).expect("Error: Thread could not send")
             };

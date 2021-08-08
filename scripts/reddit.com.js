@@ -1,9 +1,9 @@
 module.exports = {
     'reddit.com' : function(browser) {
         const url = 'https://www.reddit.com/login/?experiment_d2x_2020ify_buttons=enabled&experiment_d2x_sso_login_link=enabled';
-        const userName = process.argv[7];
-        const oldPasswd = process.argv[8];
-        const newPasswd = process.argv[9];
+        const userName = process.argv[6];
+        const oldPasswd = process.argv[7];
+        const newPasswd = process.argv[8];
     
         browser
             .url(url)
