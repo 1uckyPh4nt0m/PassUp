@@ -1,15 +1,33 @@
-active_profile = "my-private-keepassx"
+active_profile = "keepassxc"
 browser_type = "firefox"
 nr_threads = 10  #optional default: 1
 
-[profile.my-private-keepassx]
+[profile.keepassxc]
+type = "kdbx"
+sources = [ "private-kdbxc" ]
+
+[[sources]]
+name = "private-kdbxc"
+file = "tests/resources/test_db.kdbx"
+blocklist = [ "chess.com", "github.com" ]    #optional
+
+[profile.keepassx]
 type = "kdbx"
 sources = [ "private-kdbx" ]
 
 [[sources]]
 name = "private-kdbx"
-file = "tests/resources/test_db.kdbx"
-blocklist = [ "chess.com", "github.com" ]    #optional
+file = "tests/resources/kepassx.kdbx"
+blocklist = [ "chess.com", "github.com" ]
+
+[profile.keepass]
+type = "kdbx"
+sources = [ "private-kdb" ]
+
+[[sources]]
+name = "private-kdb"
+file = "tests/resources/keepass.kdbx"
+blocklist = [ "chess.com", "github.com" ]
 
 [profile.work-pass]
 type = "pass"

@@ -124,8 +124,15 @@ pub fn exec_nightwatch(script_path: &str, db_entry: &DBEntry, browser_type: &Str
 }
 
 fn get_url_check_source_blocklist(url_: &String, blocklist: &Vec<String>, urls: &HashMap<String, String>) -> Result<String> {
-    let target_url = Url::parse(&url_).context(UrlError).context(UrlParseError { url:url_.to_owned() })?;
-    let target_domain = target_url.domain().ok_or(Error::UrlDomainError { url:url_.to_owned() })?.to_owned();
+    let protocol = "((https://)|(http://)).+".to_owned();
+    let re_protocol = Regex::new(&protocol).context(RegexLibError).context(RegexError { expr:protocol })?;
+    let mut url_protocol = url_.to_owned();
+    if !re_protocol.is_match(url_) {
+        url_protocol.push_str("https://");
+        url_protocol.push_str(url_);
+    }
+    let target_url = Url::parse(&url_protocol).context(UrlError).context(UrlParseError { url:url_protocol.to_owned() })?;
+    let target_domain = target_url.domain().ok_or(Error::UrlDomainError { url:url_protocol })?.to_owned();
 
     if blocklist.contains(&target_domain) {
         return Err(Error::UrlDomainBlocked);
@@ -144,6 +151,7 @@ fn get_url_check_source_blocklist(url_: &String, blocklist: &Vec<String>, urls: 
 }
 
 pub fn get_url_and_script_path(config: &Configuration, blocklist: &Vec<String>, db_entry: &DBEntry) -> Result<String> {
+    let mut path = String::new();
     for script in config.scripts_.iter() {
         let mut script_path = PathBuf::new();
         script_path.push(&script.dir_);
@@ -152,7 +160,7 @@ pub fn get_url_and_script_path(config: &Configuration, blocklist: &Vec<String>, 
         let script_name = format!("{}.js", url);
 
         script_path.push(&script_name);
-        let path = script_path.to_str().ok_or(Error::ScriptPathError{ url:db_entry.url_.to_owned() })?.to_owned();
+        path = script_path.to_str().ok_or(Error::ScriptPathError{ url:db_entry.url_.to_owned() })?.to_owned();
 
         if !script_path.exists() {
             continue;
@@ -163,7 +171,7 @@ pub fn get_url_and_script_path(config: &Configuration, blocklist: &Vec<String>, 
         }
         return Ok(path);
     }
-    return Err(Error::ScriptPathError{ url:db_entry.url_.to_owned() });
+    return Err(Error::ScriptMissingError{ path });
 }
 
 pub fn check_dependencies(config: &Configuration) -> Result<()> {
