@@ -2,6 +2,7 @@ extern crate kpdb;
 extern crate rpassword;
 
 use rpassword::read_password;
+use std::collections::HashMap;
 use std::fs;
 use std::str;
 use crate::config::{Configuration, Source};
@@ -31,6 +32,8 @@ enum Error {
     OpenFailed { file: String, source: LibraryError },
     #[snafu(display("Entry has wrong uuid type"))]
     WrongUuidType,
+    #[snafu(display("Could not find referenced entry"))]
+    EntryReference,
     UtilsLibError { source: LibraryError }
 }
 
@@ -127,7 +130,58 @@ fn parse_kdbx_db(db: &Database) -> Result<DB> {
         db_entry.new_password_ = get_pw().context(UtilsError).context(UtilsLibError)?;
         db_vec.push(db_entry);
     }
+
+    db_vec = remove_references(db_vec)?;
+
     return Ok(DB::new(db_vec));
+}
+
+fn remove_references(db_vec: Vec<DBEntry>) -> Result<Vec<DBEntry>>{
+    let mut db_vec_wo_refs = Vec::new();
+    let reference_prefix = "{REF:";
+    let db_vec_clone = db_vec.clone();
+    for mut entry in db_vec {
+        if entry.username_.starts_with(reference_prefix) {
+            let username_ref = entry.username_.strip_prefix("{REF:").unwrap().strip_suffix("}").unwrap().to_owned();
+            let ref_entry = get_ref_entry(username_ref, &db_vec_clone)?;
+            entry.username_ = ref_entry.username_.to_owned();
+        } 
+        if entry.old_password_.starts_with(reference_prefix) {
+            let password_ref = entry.old_password_.strip_prefix(reference_prefix).unwrap().strip_suffix("}").unwrap().to_owned();
+            let ref_entry = get_ref_entry(password_ref, &db_vec_clone)?;
+            entry.old_password_ = ref_entry.old_password_.to_owned();
+        } 
+        if entry.url_.starts_with(reference_prefix) {
+            let url_ref = entry.url_.strip_prefix(reference_prefix).unwrap().strip_suffix("}").unwrap().to_owned();
+            let ref_entry = get_ref_entry(url_ref, &db_vec_clone)?;
+            entry.url_ = ref_entry.url_.to_owned();
+        }
+        db_vec_wo_refs.push(entry);
+    }
+
+    return Ok(db_vec_wo_refs);
+}
+
+fn get_ref_entry(reference: String, db_vec_clone: &Vec<DBEntry>) -> Result<DBEntry>{
+    let ref_vec: Vec<&str> = reference.split(|c| c == '@' || c == ':').collect();
+    let text = ref_vec[2].to_owned();
+
+    let ref_entry = find_entry(db_vec_clone, text)?;
+    return Ok(ref_entry.clone());
+}
+
+fn find_entry(entries: &Vec<DBEntry>, uuid: String) -> Result<&DBEntry> {
+    for entry in entries {
+        let current_uuid = match entry.uuid_ {
+            Uuid::Kdbx(x) => Some(x),
+            _ => None,
+        }.ok_or(Error::EntryReference)?;
+        let ka = current_uuid.0.to_string().replace("-", "");
+        if ka.eq_ignore_ascii_case(&uuid) {
+            return Ok(entry);
+        }
+    }
+    return Err(Error::EntryReference);
 }
 
 fn print_db_content(db: &Database) {
