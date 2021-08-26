@@ -3,7 +3,7 @@
 // nightwatch --env firefox --test lichess.org.js http://www.lichess.org bachelor1 password123 password456
 module.exports = {
 'lichess.org' : function(browser) {
-	const url = "https://www.lichess.org"
+	const url = "https://www.lichess.org";
 	const userName = process.argv[6];
     const oldPasswd = process.argv[7];
     const newPasswd = process.argv[8];

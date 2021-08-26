@@ -2,7 +2,6 @@ extern crate kpdb;
 extern crate rpassword;
 
 use rpassword::read_password;
-use std::collections::HashMap;
 use std::fs;
 use std::str;
 use crate::config::{Configuration, Source};
@@ -176,8 +175,8 @@ fn find_entry(entries: &Vec<DBEntry>, uuid: String) -> Result<&DBEntry> {
             Uuid::Kdbx(x) => Some(x),
             _ => None,
         }.ok_or(Error::EntryReference)?;
-        let ka = current_uuid.0.to_string().replace("-", "");
-        if ka.eq_ignore_ascii_case(&uuid) {
+        let uuid_ = current_uuid.0.to_string().replace("-", "");
+        if uuid_.eq_ignore_ascii_case(&uuid) {
             return Ok(entry);
         }
     }
