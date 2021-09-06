@@ -12,14 +12,12 @@ module.exports = {
             .setValue('input[name=username]', userName)
             .setValue('input[name=password]', oldPasswd)
             .click('button.AnimatedForm__submitButton.m-full-width')
-            .waitForElementPresent('button#USER_DROPDOWN_ID')
-            .click('button#USER_DROPDOWN_ID')
-            .waitForElementPresent('partial link text', 'User Settings')
-            .click('partial link text', 'User Settings')
-            .waitForElementPresent('button._2iuoyPiKHN3kfOoeIQalDT._2tU8R9NTqhvBrhoNAXWWcP.HNozj_dKjQZ59ZsfEegz8');
-        var change = browser.elements('button._2iuoyPiKHN3kfOoeIQalDT._2tU8R9NTqhvBrhoNAXWWcP.HNozj_dKjQZ59ZsfEegz8');
-        console.log(change);
-        browser
+            // .waitForElementPresent('#USER_DROPDOWN_ID')
+            // .click('#USER_DROPDOWN_ID')
+            // .waitForElementPresent('partial link text', 'User Settings')
+            // .click('partial link text', 'User Settings')
+            .url('https://www.reddit.com/settings')
+            .waitForElementPresent('button._2iuoyPiKHN3kfOoeIQalDT._2tU8R9NTqhvBrhoNAXWWcP.HNozj_dKjQZ59ZsfEegz8')
             .click('button._2iuoyPiKHN3kfOoeIQalDT._2tU8R9NTqhvBrhoNAXWWcP.HNozj_dKjQZ59ZsfEegz8')
             .waitForElementPresent('input[name=old_password]')
             .setValue('input[name=old_password]', oldPasswd)

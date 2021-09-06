@@ -9,7 +9,7 @@ sources = [ "private-kdbxc" ]
 [[sources]]
 name = "private-kdbxc"
 file = "tests/resources/test_db.kdbx"
-blocklist = [ "chess.com", "github.com" ]    #optional
+blocklist = [ "chess.com", "github.com", "lichess.org",  ]    #optional
 
 [profile.keepassx]
 type = "kdbx"

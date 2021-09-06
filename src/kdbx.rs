@@ -140,20 +140,26 @@ fn remove_references(db_vec: Vec<DBEntry>) -> Result<Vec<DBEntry>>{
     let reference_prefix = "{REF:";
     let db_vec_clone = db_vec.clone();
     for mut entry in db_vec {
-        if entry.username_.starts_with(reference_prefix) {
-            let username_ref = entry.username_.strip_prefix("{REF:").unwrap().strip_suffix("}").unwrap().to_owned();
+        let mut iter_count = 0;
+        while entry.username_.starts_with(reference_prefix) && iter_count < 1000 {
+            let username_ref = entry.username_.strip_prefix(reference_prefix).unwrap().strip_suffix("}").unwrap().to_owned();
             let ref_entry = get_ref_entry(username_ref, &db_vec_clone)?;
             entry.username_ = ref_entry.username_.to_owned();
-        } 
-        if entry.old_password_.starts_with(reference_prefix) {
+            iter_count += 1;
+        }
+        iter_count = 0;
+        while entry.old_password_.starts_with(reference_prefix) && iter_count < 1000 {
             let password_ref = entry.old_password_.strip_prefix(reference_prefix).unwrap().strip_suffix("}").unwrap().to_owned();
             let ref_entry = get_ref_entry(password_ref, &db_vec_clone)?;
             entry.old_password_ = ref_entry.old_password_.to_owned();
+            iter_count += 1
         } 
-        if entry.url_.starts_with(reference_prefix) {
+        iter_count = 0;
+        while entry.url_.starts_with(reference_prefix) && iter_count < 1000 {
             let url_ref = entry.url_.strip_prefix(reference_prefix).unwrap().strip_suffix("}").unwrap().to_owned();
             let ref_entry = get_ref_entry(url_ref, &db_vec_clone)?;
             entry.url_ = ref_entry.url_.to_owned();
+            iter_count += 1;
         }
         db_vec_wo_refs.push(entry);
     }
