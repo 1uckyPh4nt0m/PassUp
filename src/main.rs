@@ -2,6 +2,8 @@ mod pass;
 mod kdbx;
 mod passwsafe;
 mod config;
+mod chrome;
+mod keyring;
 mod utils;
 
 extern crate snafu;
@@ -9,7 +11,7 @@ extern crate clap;
 extern crate which;
 
 use clap::{Arg, App};
-use config::parse_config;
+use config::{parse_config, ProfileTypes};
 use utils::check_dependencies;
 
 fn main() {
@@ -44,11 +46,13 @@ fn main() {
         }
     };
 
-    if config.profile_.type_.eq("kdbx") {
+    if config.profile_.type_.eq(&ProfileTypes::Kdbx) {
         kdbx::run(&config);
-    } else if config.profile_.type_.eq("pass") {
+    } else if config.profile_.type_.eq(&ProfileTypes::Pass) {
         pass::run(&config);
-    } else if config.profile_.type_.eq("pwsafe") {
+    } else if config.profile_.type_.eq(&ProfileTypes::Pwsafe) {
         passwsafe::run(&config);
+    } else if config.profile_.type_.eq(&ProfileTypes::ChromeG) || config.profile_.type_.eq(&ProfileTypes::ChromeK) {
+        chrome::run(&config);
     }
 }

@@ -5,10 +5,17 @@ Automatically update passwords from common Password Managers. Supported Password
 - [KeePass](https://keepass.info/)(kdbx)
 - [KeePassX](https://www.keepassx.org/)(kdbx)
 - [KeePassXC](https://keepassxc.org/)(kdbx)
+- [PasswordSafe](https://pwsafe.org/)(psafe3)
+- [Chrome](https://www.google.com/intl/de/chrome/)(sqlite)
 
 ## Getting Started
 ### Prerequisites
-1. Install Node.js. Please refer to https://nodejs.org/en/download/ for more information.
+1. Install Node.js and Node package manager. Please refer to https://nodejs.org/en/download/ for more information.
+
+    ```
+    sudo apt install nodejs npm
+    ```
+
 
 2. Install [Nightwatch](https://nightwatchjs.org/gettingstarted/installation/):
     ```
@@ -33,6 +40,13 @@ Automatically update passwords from common Password Managers. Supported Password
 4. Install [Rust](https://www.rust-lang.org/tools/install):
     ```
     curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+    ```
+
+5. Optional for Chrome password manager
+
+    Install Openssl and Sqlite
+    ```
+    sudo apt install libssl-dev pkg-config libsqlite3-dev
     ```
 
 ## Program Usage

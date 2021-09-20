@@ -157,10 +157,8 @@ fn parse_pass() -> Result<utils::DB> {
                 }
             };
             
-            let mut url_ = "https://".to_owned();
-            url_.push_str(&url);
             let new_password = utils::get_pw().context(UtilsError).context(PassGenError)?;
-            let entry = utils::DBEntry::new(url_.clone(), username, password, new_password, utils::Uuid::None);
+            let entry = utils::DBEntry::new(url.clone(), username, password, new_password);
             db.push(entry);
         }
     }
@@ -169,8 +167,7 @@ fn parse_pass() -> Result<utils::DB> {
 
 fn update_pass_entry(db_entry_: &utils::DBEntry) -> Result<()> {
     let db_entry = db_entry_.clone();
-    let url = db_entry.url_.clone().replace("https://", "");
-    let pass_entry = format!("{}/{}", url, db_entry.username_);
+    let pass_entry = format!("{}/{}", db_entry.url_, db_entry.username_);
     let output = utils::cmd("pass", &["rm", &pass_entry], "0").context(UtilsError).context(CmdError)?;
     if !output.status.success() {
         return Err(Error::PassUpdateError { db_entry });

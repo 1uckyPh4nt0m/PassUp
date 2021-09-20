@@ -1,33 +1,15 @@
-active_profile = "keepassxc"
+active_profile = "chrome-pwm"
 browser_type = "firefox"
 nr_threads = 10  #optional default: 1
 
-[profile.keepassxc]
-type = "kdbx"
-sources = [ "private-kdbxc" ]
-
-[[sources]]
-name = "private-kdbxc"
-file = "tests/resources/test_db.kdbx"
-blocklist = [ "chess.com", "github.com", "lichess.org",  ]    #optional
-
-[profile.keepassx]
+[profile.my-private-keepassx]
 type = "kdbx"
 sources = [ "private-kdbx" ]
 
 [[sources]]
 name = "private-kdbx"
-file = "tests/resources/kepassx.kdbx"
-blocklist = [ "chess.com", "github.com" ]
-
-[profile.keepass]
-type = "kdbx"
-sources = [ "private-kdb" ]
-
-[[sources]]
-name = "private-kdb"
-file = "tests/resources/keepass.kdbx"
-blocklist = [ "chess.com", "github.com" ]
+file = "tests/resources/test_db.kdbx"
+blocklist = [ "lichess.org", "chess.com", "github.com" ]    #optional
 
 [profile.work-pass]
 type = "pass"
@@ -42,6 +24,15 @@ name = "pwsafe"
 file = "tests/resources/pwsafe.psafe3"
 blocklist = [ "chess.com", "github.com" ]    #optional
 
+[profile.chrome-pwm]
+type = "chrome-kde"
+sources = [ "chrome" ]
+
+[[sources]]
+name = "chrome"
+file = "/home/gabriel/.config/google-chrome/Default/Login Data"
+blocklist = [ "chess.com", "github.com" ]    #optional
+
 [[scripts]]
 dir = "./scripts"
 blocklist = [ "live.com.js", "myaccount.google.com.js" ]   #optional
@@ -52,7 +43,6 @@ blocklist = [ "live.com.js", "myaccount.google.com.js" ]   #optional
 "youtube.com" = "myaccount.google.com"
 "google.com" = "myaccount.google.com"
 "skype.com/" = "live.com"
-"(https://)?lichess.org(/([a-z]|[A-Z]|[0-9])*)*" = "lichess.org"
 "non-domain-name-in-DB-file" = ""
 
 [[scripts]]

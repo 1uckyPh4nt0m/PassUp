@@ -31,6 +31,8 @@ enum Error {
     OpenFailed { file: String, source: LibraryError },
     #[snafu(display("Entry has wrong uuid type"))]
     WrongUuidType,
+    #[snafu(display("Could not find referenced entry"))]
+    EntryReference,
     UtilsLibError { source: LibraryError }
 }
 
@@ -100,22 +102,16 @@ pub fn run(config: &Configuration) {
 }
 
 fn parse_db_entry(entry: &mut Entry) -> Result<DBEntry> {
-    let url_provided = entry.url().ok_or(Error::UrlMissing)?;
-    let mut url;
-    if !url_provided.starts_with("https://") {
-        url = "https://".to_owned();
-        url.push_str(&url_provided);
-    } else {
-        url = url_provided.to_owned();
-    }
+    let url = entry.url().ok_or(Error::UrlMissing)?.to_owned();
     let username = entry.username().unwrap_or("").to_owned();
     let old_pass = entry.password().unwrap_or("").to_owned();
 
     if username.is_empty() || old_pass.is_empty() {
         return Err(Error::CredentialMissing { url });
     }
-
-    return Ok(DBEntry::new(url, username, old_pass, "".to_owned(), Uuid::Kdbx(entry.uuid)));
+    let mut dbentry = DBEntry::new(url, username, old_pass, "".to_owned());
+    dbentry.uuid_ = Uuid::Kdbx(entry.uuid);
+    return Ok(dbentry);
 }
 
 fn parse_kdbx_db(db: &Database) -> Result<DB> {
@@ -133,7 +129,64 @@ fn parse_kdbx_db(db: &Database) -> Result<DB> {
         db_entry.new_password_ = get_pw().context(UtilsError).context(UtilsLibError)?;
         db_vec.push(db_entry);
     }
+
+    db_vec = remove_references(db_vec)?;
+
     return Ok(DB::new(db_vec));
+}
+
+fn remove_references(db_vec: Vec<DBEntry>) -> Result<Vec<DBEntry>>{
+    let mut db_vec_wo_refs = Vec::new();
+    let reference_prefix = "{REF:";
+    let db_vec_clone = db_vec.clone();
+    for mut entry in db_vec {
+        let mut iter_count = 0;
+        while entry.username_.starts_with(reference_prefix) && iter_count < 1000 {
+            let username_ref = entry.username_.strip_prefix(reference_prefix).unwrap().strip_suffix("}").unwrap().to_owned();
+            let ref_entry = get_ref_entry(username_ref, &db_vec_clone)?;
+            entry.username_ = ref_entry.username_.to_owned();
+            iter_count += 1;
+        }
+        iter_count = 0;
+        while entry.old_password_.starts_with(reference_prefix) && iter_count < 1000 {
+            let password_ref = entry.old_password_.strip_prefix(reference_prefix).unwrap().strip_suffix("}").unwrap().to_owned();
+            let ref_entry = get_ref_entry(password_ref, &db_vec_clone)?;
+            entry.old_password_ = ref_entry.old_password_.to_owned();
+            iter_count += 1
+        } 
+        iter_count = 0;
+        while entry.url_.starts_with(reference_prefix) && iter_count < 1000 {
+            let url_ref = entry.url_.strip_prefix(reference_prefix).unwrap().strip_suffix("}").unwrap().to_owned();
+            let ref_entry = get_ref_entry(url_ref, &db_vec_clone)?;
+            entry.url_ = ref_entry.url_.to_owned();
+            iter_count += 1;
+        }
+        db_vec_wo_refs.push(entry);
+    }
+
+    return Ok(db_vec_wo_refs);
+}
+
+fn get_ref_entry(reference: String, db_vec_clone: &Vec<DBEntry>) -> Result<DBEntry>{
+    let ref_vec: Vec<&str> = reference.split(|c| c == '@' || c == ':').collect();
+    let text = ref_vec[2].to_owned();
+
+    let ref_entry = find_entry(db_vec_clone, text)?;
+    return Ok(ref_entry.clone());
+}
+
+fn find_entry(entries: &Vec<DBEntry>, uuid: String) -> Result<&DBEntry> {
+    for entry in entries {
+        let current_uuid = match entry.uuid_ {
+            Uuid::Kdbx(x) => Some(x),
+            _ => None,
+        }.ok_or(Error::EntryReference)?;
+        let uuid_ = current_uuid.0.to_string().replace("-", "");
+        if uuid_.eq_ignore_ascii_case(&uuid) {
+            return Ok(entry);
+        }
+    }
+    return Err(Error::EntryReference);
 }
 
 fn print_db_content(db: &Database) {

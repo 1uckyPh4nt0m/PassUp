@@ -113,6 +113,7 @@ pub fn unlock_and_parse_db(source: &Source) -> Result<(DB, String, u16, Vec<(u8,
                 }
             }
         };
+
         let mut entry = DBEntry::empty();
 
         version = match psdb.read_version() {

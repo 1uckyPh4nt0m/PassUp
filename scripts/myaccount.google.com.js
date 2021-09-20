@@ -2,10 +2,10 @@
 
 module.exports = {
 'google.com' : function(browser) {
-	const url = process.argv[6];
-	const userName = process.argv[7];
-    const oldPasswd = process.argv[8];
-    const newPasswd = process.argv[9];
+	const url = "https://www.myaccount.google.com";
+	const userName = process.argv[6];
+    const oldPasswd = process.argv[7];
+    const newPasswd = process.argv[8];
 
 	browser
 		.url(url)
