@@ -18,7 +18,7 @@ fn main() {
     let matches = App::new("PassUp")
                             .version("0.1")
                             .author("Gabriel V. <gabriel.vukovic@student.tugraz.com>")
-                            .about("Automatically updates password databases of pass and keepass")
+                            .about("Automatically updates password databases of keepass, pass, PasswordSafe and Chrome")
                             .arg(Arg::with_name("config")
                                 .short("c")
                                 .long("config")
