@@ -8,7 +8,7 @@ edition = "2018"
 rust-kpdb = "0.4.2"
 rand = "0.8.3"
 crypt = "0.1.0"
-dirs = "3.0.1"
+dirs = "4.0.0"
 clap = "2.33.3"
 toml = "0.5.8"
 rpassword = "5.0.1"
@@ -17,8 +17,11 @@ snafu = "0.6.10"
 which = "4.1.0"
 threadpool = "1.8.1"
 regex = "1.5.3"
-pwsafe = "0.1.2"
 cryptex = "1.0.0"
+pwsafe = "0.1.2"
 [dependencies.passwords]
 version = "3.1.4"
 features = ["crypto"]
+
+[patch.crates-io]
+pwsafe = { git = 'https://github.com/1uckyPh4nt0m/pwsafe-0.1.3' }
