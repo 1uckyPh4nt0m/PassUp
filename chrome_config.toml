@@ -31,7 +31,7 @@ sources = [ "chrome" ]
 [[sources]]
 name = "chrome"
 file = "/home/gabriel/.config/google-chrome/Default/Login Data"
-blocklist = [ "chess.com", "github.com" ]    #optional
+blocklist = [ "chess.com", "github.com", "lichess.org" ]    #optional
 
 [[scripts]]
 dir = "./scripts"

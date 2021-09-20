@@ -70,8 +70,9 @@ pub fn run(config: &Configuration) {
                 let err = utils::Error::NightwatchExecError { db_entry: db_entry_, output};
                 eprintln!("{}", err);
                 db_entry.new_password_ = db_entry.old_password_.to_owned();
+            } else {
+                println!("Updated password on website {}, with username {}", db_entry.url_, db_entry.username_);
             }
-            println!("Updated password on website {}, with username {}", db_entry.url_, db_entry.username_);
             updated_entries.push(db_entry);
         }
 
@@ -217,7 +218,7 @@ pub fn update_db(source: &Source, db: &DB, db_password: String, records: Vec<(u8
         psdb.write_field(record_type, &record_data).context(IoError).context(err.clone())?;
     }
 
-    psdb.finish().context(IoError).context(err.clone())?; // EOF and HMAC
+    psdb.finish().context(IoError).context(err.clone())?;
     fs::remove_file(&filename_copy).context(IoError).context(err.clone())?;
     return Ok(());
 }

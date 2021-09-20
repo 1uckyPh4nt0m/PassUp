@@ -1,6 +1,6 @@
 module.exports = {
     'reddit.com' : function(browser) {
-        const url = 'https://www.reddit.com/login/?experiment_d2x_2020ify_buttons=enabled&experiment_d2x_sso_login_link=enabled';
+        const url = 'https://www.reddit.com/login';
         const userName = process.argv[6];
         const oldPasswd = process.argv[7];
         const newPasswd = process.argv[8];
@@ -12,19 +12,15 @@ module.exports = {
             .setValue('input[name=username]', userName)
             .setValue('input[name=password]', oldPasswd)
             .click('button.AnimatedForm__submitButton.m-full-width')
-            // .waitForElementPresent('#USER_DROPDOWN_ID')
-            // .click('#USER_DROPDOWN_ID')
-            // .waitForElementPresent('partial link text', 'User Settings')
-            // .click('partial link text', 'User Settings')
-            .url('https://www.reddit.com/settings')
-            .waitForElementPresent('button._2iuoyPiKHN3kfOoeIQalDT._2tU8R9NTqhvBrhoNAXWWcP.HNozj_dKjQZ59ZsfEegz8')
-            .click('button._2iuoyPiKHN3kfOoeIQalDT._2tU8R9NTqhvBrhoNAXWWcP.HNozj_dKjQZ59ZsfEegz8')
+            .pause(5000)
+            .refresh()
+            .url('https://www.reddit.com/change_password/?experiment_d2x_2020ify_buttons=enabled')
             .waitForElementPresent('input[name=old_password]')
             .setValue('input[name=old_password]', oldPasswd)
             .setValue('input[name=password]', newPasswd)
             .setValue('input[name=password2]', newPasswd)
             .click('button[type=submit]')
-            .assert.containsText('User settings')
+            .assert.containsText('Your password has been changed')
             .end();
     }
 };

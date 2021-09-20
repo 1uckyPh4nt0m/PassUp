@@ -22,7 +22,7 @@ sources = [ "pwsafe" ]
 [[sources]]
 name = "pwsafe"
 file = "tests/resources/pwsafe.psafe3"
-blocklist = [ "chess.com", "github.com" ]    #optional
+blocklist = [ "chess.com", "github.com", "lichess.org" ]    #optional
 
 [[scripts]]
 dir = "./scripts"

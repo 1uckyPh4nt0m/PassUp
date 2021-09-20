@@ -134,7 +134,10 @@ fn get_url_check_source_blocklist(url_: &String, blocklist: &Vec<String>, urls: 
         url_protocol.push_str(url_);
     }
     let target_url = Url::parse(&url_protocol).context(UrlError).context(UrlParseError { url:url_protocol.to_owned() })?;
-    let target_domain = target_url.domain().ok_or(Error::UrlDomainError { url:url_protocol })?.to_owned();
+    let mut target_domain = target_url.domain().ok_or(Error::UrlDomainError { url:url_protocol })?.to_owned();
+    if target_domain.starts_with("www.") {
+        target_domain = target_domain.trim_start_matches("www.").to_owned();
+    }
 
     if blocklist.contains(&target_domain) {
         return Err(Error::UrlDomainBlocked);
