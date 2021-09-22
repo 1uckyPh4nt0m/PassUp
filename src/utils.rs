@@ -17,6 +17,10 @@ use regex::Regex;
 
 const FIREFOX_PORT: u16 = 4444;
 const CHROME_PORT: u16 = 9515;
+const FIREFOX_BIN: &'static str = "firefox";
+const CHROME_BIN: &'static str = "google-chrome";
+const NIGHTWATCH_BIN: &'static str = "nightwatch";
+const LOCALHOST: &'static str = "127.0.0.1";
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Uuid {
@@ -120,7 +124,7 @@ pub fn cmd(program: &'static str, args: &[&str], port: &str) -> Result<Output> {
 
 //pub fn exec_nightwatch(script_path: &str, url: &str, db_entry: &DBEntry, browser_type: &String, port: &String) -> Result<Output> {
 pub fn exec_nightwatch(script_path: &str, db_entry: &DBEntry, browser_type: &String, port: &String) -> Result<Output> {
-    cmd("nightwatch", 
+    cmd(NIGHTWATCH_BIN, 
             &["--env", browser_type, "--test", script_path, 
             &db_entry.username_, &db_entry.old_password_, &db_entry.new_password_], port)
 }
@@ -180,23 +184,20 @@ pub fn get_url_and_script_path(config: &Configuration, blocklist: &Vec<String>, 
 }
 
 pub fn check_dependencies(config: &Configuration) -> Result<()> {
-    let binary_name = "nightwatch";
-    match which(binary_name) {
+    match which(NIGHTWATCH_BIN) {
         Ok(_) => (),
-        Err(_) => return Err(Error::DependencyMissingError { binary_name, program: "Nightwatch"})
+        Err(_) => return Err(Error::DependencyMissingError { binary_name: NIGHTWATCH_BIN, program: "Nightwatch"})
     }
     if config.browser_type_ == BrowserType::Firefox {
-        let binary_name = "firefox";
-        match which(binary_name) {
+        match which(FIREFOX_BIN) {
             Ok(_) => (),
-            Err(_) => return Err(Error::DependencyMissingError { binary_name, program: "Firefox"})
+            Err(_) => return Err(Error::DependencyMissingError { binary_name: FIREFOX_BIN, program: "Firefox"})
 
         }
     } else if config.browser_type_ == BrowserType::Chrome {
-        let binary_name = "google-chrome";
-        match which(binary_name) {
+        match which(CHROME_BIN) {
             Ok(_) => (),
-            Err(_) => return Err(Error::DependencyMissingError { binary_name, program: "Chrome"})
+            Err(_) => return Err(Error::DependencyMissingError { binary_name: CHROME_BIN, program: "Chrome"})
         }
     }
 
@@ -204,7 +205,7 @@ pub fn check_dependencies(config: &Configuration) -> Result<()> {
 }
 
 pub fn check_port_available(port: u16) -> bool {
-    match std::net::TcpListener::bind(("127.0.0.1", port)) {
+    match std::net::TcpListener::bind((LOCALHOST, port)) {
         Ok(_) => true,
         Err(_) => false
     }
@@ -215,10 +216,10 @@ pub fn run_update_threads(db: &DB, blocklist: &Vec<String>, config: &Configurati
     let browser_type;
     if config.browser_type_ == BrowserType::Firefox {
         port = FIREFOX_PORT;
-        browser_type = "firefox".to_owned();
+        browser_type = BrowserType::Firefox.as_str().to_owned();
     } else {
         port = CHROME_PORT;
-        browser_type = "chrome".to_owned();
+        browser_type = BrowserType::Chrome.as_str().to_owned();
     }
     let mut nr_jobs = 0usize;
     let pool = ThreadPool::new(config.nr_threads_);

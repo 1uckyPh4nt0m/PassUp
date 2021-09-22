@@ -235,11 +235,7 @@ fn unlock_db(source: &Source) -> Result<Database> {
                 password_wrong = false;
                 db
             }
-            Err(kpdb::Error::CryptoError(_)) => {
-                println!("Wrong password! Please try again:");
-                continue;
-            }
-            Err(kpdb::Error::InvalidKey) => {
+            Err(kpdb::Error::CryptoError(_)) | Err(kpdb::Error::InvalidKey) => {
                 println!("Wrong password! Please try again:");
                 continue;
             }

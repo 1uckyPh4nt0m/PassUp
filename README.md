@@ -59,6 +59,8 @@ Run the program:
 ```
 cargo run -- [Program arguments]
 ```
+
+Wether or not the browser is executed in headless mode, can be changed in *nightwatch.conf.js*. To disable headless mode comment the *'-headless'* argument out for the desired browser.
 ### Program Arguments
 Argument | Description
 -------- | -----------
@@ -67,13 +69,13 @@ Argument | Description
 -V, --version | Prints version information
 
 ### Configuration file
-Allows you to choose between the browser to be used, the pass and kdbx variant.
+Allows you to choose between the browser to be used and the password manager variant.
 #### Example configuration file:
-The configuration file has to be written in the [TOML](https://toml.io/en/) format.
 
 ```toml
 active_profile = "my-private-keepassx"
 browser_type = "firefox"    #browser_type = "chrome"
+nr_threads = 10     #optional default: 1
 
 [profile.my-private-keepassx]
 type = "kdbx"
@@ -99,10 +101,16 @@ blocklist = [ "live.com.js" ]   #optional
 [urls]  #optional
 "([^/]{1,30}://)?[^/]+gmail.com(/$|/.*)" = "myaccount.google.com.js"
 "skype.com/" = "live.com.js"
+"(https://)?lichess.org(/([a-z]|[A-Z]|[0-9])*)*" = "lichess.org"
 "non-domain-name-in-DB-file" = ""
 
 [[scripts]]
 dir = "development/my-custom-PassUp-scripts"
 ```
+The configuration file has to be written and saved in the [TOML](https://toml.io/en/) format.
 
-Store the config file as a *.toml* file.
+Allowed configuration parameters:
+- browser_type: ```["firefox", "chrome"]```
+- profile.type: ```["kdbx", "pass", "pwsafe", "chrome-gnome", "chrome-kde"]```
+
+The ```[urls]``` section is used to match the correct script to any url that is provided through the password database.

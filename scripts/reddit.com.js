@@ -4,7 +4,7 @@ module.exports = {
         const userName = process.argv[6];
         const oldPasswd = process.argv[7];
         const newPasswd = process.argv[8];
-    
+
         browser
             .url(url)
             .waitForElementPresent('body')
@@ -13,14 +13,14 @@ module.exports = {
             .setValue('input[name=password]', oldPasswd)
             .click('button.AnimatedForm__submitButton.m-full-width')
             .pause(5000)
-            .refresh()
             .url('https://www.reddit.com/change_password/?experiment_d2x_2020ify_buttons=enabled')
             .waitForElementPresent('input[name=old_password]')
             .setValue('input[name=old_password]', oldPasswd)
             .setValue('input[name=password]', newPasswd)
             .setValue('input[name=password2]', newPasswd)
             .click('button[type=submit]')
-            .assert.containsText('Your password has been changed')
+            .waitForElementPresent('span.AnimatedForm__submitStatusMessage')
+            .assert.containsText('span.AnimatedForm__submitStatusMessage', 'has been changed!')
             .end();
     }
 };

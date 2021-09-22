@@ -10,6 +10,15 @@ pub enum BrowserType {
     Chrome
 }
 
+impl BrowserType {
+    pub fn as_str(&self) -> &'static str {
+        match *self {
+            BrowserType::Firefox => "firefox",
+            BrowserType::Chrome => "chrome",
+        }
+    }
+}
+
 #[derive(Debug)]
 pub struct Configuration {
     pub browser_type_: BrowserType,
@@ -36,16 +45,12 @@ pub enum ProfileTypes {
 
 impl ProfileTypes {
     pub fn as_str(&self) -> &'static str {
-        if self.eq(&ProfileTypes::Kdbx) { 
-            return "kdbx" 
-        } else if self.eq(&ProfileTypes::Pass) { 
-            return "pass" 
-        } else if self.eq(&ProfileTypes::Pwsafe) { 
-            return "pwsafe" 
-        } else if self.eq(&ProfileTypes::ChromeG) { 
-            return "chrome-gnome" 
-        } else {
-            return "chrome-kde"
+        match *self {
+            ProfileTypes::Kdbx => "kdbx",
+            ProfileTypes::Pass => "pass",
+            ProfileTypes::Pwsafe => "pwsafe",
+            ProfileTypes::ChromeG => "chrome-gnome",
+            ProfileTypes::ChromeK => "chrome-kde",
         }
     }
 }
@@ -154,9 +159,9 @@ pub fn parse_config(path: &str) -> Result<Configuration> {
                                     .to_ascii_lowercase();
 
     let browser_type;
-    if browser_type_s.eq("firefox") {
+    if browser_type_s.eq(BrowserType::Firefox.as_str()) {
         browser_type = BrowserType::Firefox;
-    } else if browser_type_s.eq("chrome") {
+    } else if browser_type_s.eq(BrowserType::Chrome.as_str()) {
         browser_type = BrowserType::Chrome;
     } else {
         return Err(Error::ConfigBrowserTypeWrong);
@@ -229,14 +234,14 @@ pub fn parse_config(path: &str) -> Result<Configuration> {
 }
 
 fn create_profiletype_map() -> HashMap<String, ProfileTypes> {
-    let mut ProfileMap = HashMap::new();
-    ProfileMap.insert("kdbx".to_owned(), ProfileTypes::Kdbx);
-    ProfileMap.insert("pass".to_owned(), ProfileTypes::Pass);
-    ProfileMap.insert("pwsafe".to_owned(), ProfileTypes::Pwsafe);
-    ProfileMap.insert("chrome-gnome".to_owned(), ProfileTypes::ChromeG);
-    ProfileMap.insert("chrome-kde".to_owned(), ProfileTypes::ChromeK);
+    let mut profile_map = HashMap::new();
+    profile_map.insert("kdbx".to_owned(), ProfileTypes::Kdbx);
+    profile_map.insert("pass".to_owned(), ProfileTypes::Pass);
+    profile_map.insert("pwsafe".to_owned(), ProfileTypes::Pwsafe);
+    profile_map.insert("chrome-gnome".to_owned(), ProfileTypes::ChromeG);
+    profile_map.insert("chrome-kde".to_owned(), ProfileTypes::ChromeK);
 
-    return ProfileMap;
+    return profile_map;
 }
 
 fn parse_profile(profile: &Value) -> Result<Profile> {

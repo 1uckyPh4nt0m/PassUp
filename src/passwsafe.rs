@@ -148,22 +148,13 @@ pub fn unlock_and_parse_db(source: &Source) -> Result<(DB, String, u16, Vec<(u8,
             };
             record_vec.push((field_type, field_data));
             match &record {
-                PwsafeRecordField::Url(url_provided) => {
-                    let mut url;
-                    if !url_provided.starts_with("https://") {
-                        url = "https://".to_owned();
-                        url.push_str(&url_provided);
-                    } else {
-                        url = url_provided.to_owned();
-                    }
-                    entry.url_ = url.to_owned();
-                },
+                PwsafeRecordField::Url(url_provided) => entry.url_ = url_provided.to_owned(),
                 PwsafeRecordField::Username(username) => entry.username_ = username.to_owned(),
                 PwsafeRecordField::Password(password) => entry.old_password_ = password.to_owned(),
                 PwsafeRecordField::Uuid(uuid) => entry.uuid_ = Uuid::Pwsafe(uuid.to_owned()),
                 PwsafeRecordField::EndOfRecord => {
                     let mut entry_ = entry.clone();
-                    if entry_.url_.ne("") && entry_.username_.ne("") && entry_.old_password_.ne("") {
+                    if !entry_.url_.is_empty() && !entry_.username_.is_empty() && !entry_.old_password_.is_empty() {
                         entry_.new_password_ = get_pw().context(UtilsError).context(UtilsLibError)?;
                         entry_vec.push(entry_);
                     }
