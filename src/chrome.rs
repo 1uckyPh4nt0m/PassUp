@@ -68,7 +68,7 @@ pub fn run(config: &Configuration) {
             };
 
             let mut db_entry = thread_result.db_entry_;
-            if output.status.success() == true {
+            if output.status.success() {
                 println!("Updated password on website {}, with username {}", &db_entry.url_, &db_entry.username_);
                 db_vec.push(db_entry);
             } else {

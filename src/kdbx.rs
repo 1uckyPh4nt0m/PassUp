@@ -69,7 +69,7 @@ pub fn run(config: &Configuration) {
             };
 
             let db_entry = thread_result.db_entry_;
-            if output.status.success() == true {
+            if output.status.success() {
                 let mut new_entry = Entry::new();
                 new_entry.set_url(&db_entry.url_);
                 new_entry.set_username(&db_entry.username_);
