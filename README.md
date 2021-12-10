@@ -49,6 +49,18 @@ Automatically update passwords from common Password Managers. Supported Password
     sudo apt install libssl-dev pkg-config libsqlite3-dev
     ```
 
+### Prerequisites (Ubuntu)
+
+The following commands can be run on Ubuntu to install required packages:
+
+```
+sudo apt install nodejs nodejs-legacy npm libssl-dev pkg-config libsqlite3-dev
+npm install -g nightwatch
+npm install geckodriver --save-dev
+npm install chromedriver --save-dev
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+```
+
 ## Program Usage
 ### Compile and Run
 Compile the package and all the dependencies:
