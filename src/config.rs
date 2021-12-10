@@ -1,5 +1,5 @@
 use toml::Value;
-use std::{fs, usize};
+use std::{fmt, fs, usize};
 use std::collections::HashMap;
 
 use snafu::{ResultExt, Snafu};
@@ -10,14 +10,15 @@ pub enum BrowserType {
     Chrome
 }
 
-impl BrowserType {
-    pub fn as_str(&self) -> &'static str {
+impl fmt::Display for BrowserType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
-            BrowserType::Firefox => "firefox",
-            BrowserType::Chrome => "chrome",
+            BrowserType::Firefox => write!(f, "firefox"),
+            BrowserType::Chrome => write!(f, "chrome"),
         }
     }
 }
+
 
 #[derive(Debug)]
 pub struct Configuration {
@@ -43,14 +44,14 @@ pub enum ProfileTypes {
     ChromeK,
 }
 
-impl ProfileTypes {
-    pub fn as_str(&self) -> &'static str {
+impl fmt::Display for ProfileTypes {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         match *self {
-            ProfileTypes::Kdbx => "kdbx",
-            ProfileTypes::Pass => "pass",
-            ProfileTypes::Pwsafe => "pwsafe",
-            ProfileTypes::ChromeG => "chrome-gnome",
-            ProfileTypes::ChromeK => "chrome-kde",
+            ProfileTypes::Kdbx => write!(f, "kdbx"),
+            ProfileTypes::Pass => write!(f, "pass"),
+            ProfileTypes::Pwsafe => write!(f, "pwsafe"),
+            ProfileTypes::ChromeG => write!(f, "chrome-gnome"),
+            ProfileTypes::ChromeK => write!(f, "chrome-kde"),
         }
     }
 }
@@ -159,9 +160,9 @@ pub fn parse_config(path: &str) -> Result<Configuration> {
                                     .to_ascii_lowercase();
 
     let browser_type;
-    if browser_type_s.eq(BrowserType::Firefox.as_str()) {
+    if browser_type_s.eq(&BrowserType::Firefox.to_string()) {
         browser_type = BrowserType::Firefox;
-    } else if browser_type_s.eq(BrowserType::Chrome.as_str()) {
+    } else if browser_type_s.eq(&BrowserType::Chrome.to_string()) {
         browser_type = BrowserType::Chrome;
     } else {
         return Err(Error::ConfigBrowserTypeWrong);
@@ -277,7 +278,7 @@ fn parse_source(source: &Value, profile: &Profile) -> Result<Source> {
     let file = match source.get("file") {
         Some(file) => file.to_string().replace("\"", ""),
         None => {
-            if PROFILE_TYPES_WITH_SOURCE.contains(&&profile.type_.as_str()) {
+            if PROFILE_TYPES_WITH_SOURCE.contains(format!("{}", profile.type_)) {
                 return Err(Error::SourcesFileMissing);
             }
             "".to_owned()

@@ -216,10 +216,10 @@ pub fn run_update_threads(db: &DB, blocklist: &Vec<String>, config: &Configurati
     let browser_type;
     if config.browser_type_ == BrowserType::Firefox {
         port = FIREFOX_PORT;
-        browser_type = BrowserType::Firefox.as_str().to_owned();
+        browser_type = BrowserType::Firefox.to_string();
     } else {
         port = CHROME_PORT;
-        browser_type = BrowserType::Chrome.as_str().to_owned();
+        browser_type = BrowserType::Chrome.to_string();
     }
     let mut nr_jobs = 0usize;
     let pool = ThreadPool::new(config.nr_threads_);
