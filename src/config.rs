@@ -1,8 +1,9 @@
-use toml::Value;
-use std::{fmt, fs, usize};
+use std::{fmt, fs, io, usize, result};
 use std::collections::HashMap;
 
+use toml::Value;
 use snafu::{ResultExt, Snafu};
+
 
 #[derive(Debug, PartialEq)]
 pub enum BrowserType {
@@ -97,7 +98,7 @@ pub enum Error {
     //*********************************************************************************
     //Config Errors
     #[snafu(display("Could not open config from \'{}\': {}", path, source))]
-    ConfigOpen { path: String, source: std::io::Error },
+    ConfigOpen { path: String, source: io::Error },
     #[snafu(display("Config file from \'{}\' is not a valid toml file: {}", path, source))]
     ConfigWrongFormat { path: String, source: toml::de::Error },
     #[snafu(display("Wrong browser type set in config file"))]
@@ -146,13 +147,13 @@ pub enum Error {
     ScriptsDirNotPresent { dir: String }
 }
 
-type Result<T, E=Error> = std::result::Result<T, E>;
+type Result<T, E=Error> = result::Result<T, E>;
 
 pub fn parse_config(path: &str) -> Result<Configuration> {
     let config_r = fs::read(path).context(ConfigOpen { path })?;
     let config_str = String::from_utf8(config_r).map_err(|_| Error::ConfigOpen {
         path: path.to_string(),
-        source: std::io::Error::new(std::io::ErrorKind::InvalidData, "expected UTF-8 text file"),
+        source: io::Error::new(io::ErrorKind::InvalidData, "expected UTF-8 text file"),
     })?;
 
     let config: Value = toml::from_str(&config_str).context(ConfigWrongFormat { path })?;

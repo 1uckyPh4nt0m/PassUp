@@ -1,18 +1,17 @@
-extern crate kpdb;
-extern crate rpassword;
+use std::{fs, io, result, str};
+use std::sync::mpsc::channel;
 
 use rpassword::read_password;
-use std::fs;
-use std::str;
-use crate::config::{Configuration, Source};
-use crate::utils::{self, get_pw, DBEntry, DB, run_update_threads, Uuid};
 use kpdb::{CompositeKey, Database, Entry};
 use snafu::{ResultExt, Snafu};
-use std::sync::mpsc::channel;
+
+use crate::config::{Configuration, Source};
+use crate::utils::{self, get_pw, DBEntry, DB, run_update_threads, Uuid};
+
 
 #[derive(Debug, Snafu)]
 enum LibraryError {
-    IoError { source: std::io::Error },
+    IoError { source: io::Error },
     KpdbError { source: kpdb::Error },
     UtilsError { source: utils::Error }
 }
@@ -36,7 +35,7 @@ enum Error {
     UtilsLibError { source: LibraryError }
 }
 
-type Result<T, E = Error> = std::result::Result<T, E>;
+type Result<T, E = Error> = result::Result<T, E>;
 
 pub fn run(config: &Configuration) {
     for source in &config.sources_ {
@@ -203,7 +202,7 @@ fn print_db_content(db: &Database) {
 fn update_db(source: &Source, db_: &Database) -> Result<()> {
     let db = db_.clone();
     let err = DbUpdateFailed { file: source.file_.to_owned() };
-    std::fs::remove_file(&source.file_).context(IoError).context(err.clone())?;
+    fs::remove_file(&source.file_).context(IoError).context(err.clone())?;
     let mut file = fs::File::create(&source.file_).context(IoError).context(err.clone())?;
     db.save(&mut file).context(KpdbError).context(err)?;
 

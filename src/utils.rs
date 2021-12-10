@@ -1,19 +1,20 @@
-extern crate passwords;
-extern crate toml;
-extern crate url;
+use std::{io, net, result, str};
+use std::path::PathBuf;
+use std::collections::HashMap;
+use std::process::{Command, Output};
+use std::sync::mpsc::Sender;
 
-use std::{collections::HashMap, process::{Command, Output}, sync::mpsc::Sender};
 use kpdb::EntryUuid;
 use passwords::PasswordGenerator;
 use threadpool::ThreadPool;
-use std::path::PathBuf;
-use url::{Url};
-use crate::config::{BrowserType, Configuration};
-use std::io;
+use url::Url;
 use snafu::{ResultExt, Snafu};
 use which::which;
-use crate::utils;
 use regex::Regex;
+
+use crate::config::{BrowserType, Configuration};
+use crate::utils;
+
 
 const FIREFOX_PORT: u16 = 4444;
 const CHROME_PORT: u16 = 9515;
@@ -75,7 +76,7 @@ pub enum Error {
     #[snafu(display("Script path \'{}\' is not present", path))]
     ScriptMissingError { path: String },
     ScriptBlocked,
-    #[snafu(display("Warning: Script for website \'{}\' with username: \'{}\' did not execute successfully\n{}", db_entry.url_, db_entry.username_, std::str::from_utf8(&output.stdout).unwrap_or("error")))]
+    #[snafu(display("Warning: Script for website \'{}\' with username: \'{}\' did not execute successfully\n{}", db_entry.url_, db_entry.username_, str::from_utf8(&output.stdout).unwrap_or("error")))]
     NightwatchExecError { db_entry: DBEntry, output: Output },
     #[snafu(display("The binary {} was not found! Please install {}, refer to the README.md for help", binary_name, program))]
     DependencyMissingError { binary_name: &'static str, program: &'static str },
@@ -83,7 +84,7 @@ pub enum Error {
     RegexError { expr: String, source: LibraryError }
 }
 
-type Result<T, E=Error> = std::result::Result<T, E>;
+type Result<T, E=Error> = result::Result<T, E>;
 
 pub struct ThreadResult {
     pub db_entry_: DBEntry,
@@ -199,7 +200,7 @@ pub fn check_dependencies(config: &Configuration) -> Result<()> {
 }
 
 pub fn check_port_available(port: u16) -> bool {
-    std::net::TcpListener::bind((LOCALHOST, port)).is_ok()
+    net::TcpListener::bind((LOCALHOST, port)).is_ok()
 }
 
 pub fn run_update_threads(db: &DB, blocklist: &[String], config: &Configuration, tx: Sender<ThreadResult>) -> usize {

@@ -1,15 +1,17 @@
-use std::{process::{Command, Stdio}, sync::mpsc::channel};
-use std::str;
+use std::{fs, io, result, str};
 use std::path::PathBuf;
-use std::fs;
+use std::process::{Command, Stdio};
+use std::sync::mpsc::channel;
+
+use snafu::{ResultExt, Snafu};
 
 use crate::utils::{self, run_update_threads};
 use crate::config::{Configuration};
-use snafu::{ResultExt, Snafu};
+
 
 #[derive(Debug, Snafu)]
 pub enum LibraryError {
-    IoError { source: std::io::Error },
+    IoError { source: io::Error },
     UtilsError { source: utils::Error }
 }
 
@@ -28,7 +30,7 @@ pub enum Error {
     CmdError  { source: LibraryError },
 }
 
-type Result<T, E=Error> = std::result::Result<T, E>;
+type Result<T, E=Error> = result::Result<T, E>;
 
 pub fn run(config: &Configuration) {
     let db = match parse_pass() {

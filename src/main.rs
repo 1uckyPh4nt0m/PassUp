@@ -6,10 +6,6 @@ mod chrome;
 mod keyring;
 mod utils;
 
-extern crate snafu;
-extern crate clap;
-extern crate which;
-
 use clap::{Arg, App};
 use config::{parse_config, ProfileTypes};
 use utils::check_dependencies;
@@ -38,12 +34,9 @@ fn main() {
         }
     };
 
-    match check_dependencies(&config) {
-        Ok(()) => (),
-        Err(err) => {
-            eprintln!("Dependency Error: {}", err);
-            return;
-        }
+    if let Err(err) = check_dependencies(&config) {
+        eprintln!("Dependency Error: {}", err);
+        return;
     };
 
     if config.profile_.type_.eq(&ProfileTypes::Kdbx) {

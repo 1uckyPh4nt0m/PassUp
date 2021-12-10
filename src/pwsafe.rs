@@ -1,19 +1,19 @@
-extern crate pwsafer;
-
-use pwsafer::{PwsafeReader, PwsafeWriter, PwsafeRecordField};
-use std::fs::{self, File};
-use std::io::{BufReader, BufWriter};
+use std::{fs, io, result};
 use std::sync::mpsc::channel;
-use crate::utils::{self, DB, DBEntry, Uuid, get_pw, run_update_threads};
-use crate::config::{Configuration, Source};
-use snafu::{ResultExt, Snafu};
-use rpassword::read_password;
 
-type Result<T, E = Error> = std::result::Result<T, E>;
+use rpassword::read_password;
+use snafu::{ResultExt, Snafu};
+use pwsafer::{PwsafeReader, PwsafeWriter, PwsafeRecordField};
+
+use crate::config::{Configuration, Source};
+use crate::utils::{self, DB, DBEntry, Uuid, get_pw, run_update_threads};
+
+
+type Result<T, E = Error> = result::Result<T, E>;
 
 #[derive(Debug, Snafu)]
 pub enum LibraryError {
-    IoError { source: std::io::Error },
+    IoError { source: io::Error },
     UtilsError { source: utils::Error }
 }
 
@@ -98,8 +98,8 @@ pub fn unlock_and_parse_db(source: &Source) -> Result<(DB, String, u16, Vec<(u8,
 
     while password_wrong {
         db_password = read_password().unwrap_or_else(|_| "".to_owned());
-        let file = File::open(&source.file_).context(IoError).context(OpenFailed { file: source.file_.to_owned() })?;
-        let breader_file = BufReader::new(file);
+        let file = fs::File::open(&source.file_).context(IoError).context(OpenFailed { file: source.file_.to_owned() })?;
+        let breader_file = io::BufReader::new(file);
         let mut psdb = match PwsafeReader::new(breader_file, db_password.as_bytes()) {
             Ok(db) => {
                 password_wrong = false;
@@ -176,7 +176,7 @@ pub fn update_db(source: &Source, db: &DB, db_password: String, records: Vec<(u8
     let filename = source.file_.to_owned();
     let filename_copy = format!("{}_copy", &filename);
     fs::rename(&filename, &filename_copy).context(IoError).context(err.clone())?;
-    let file = BufWriter::new(File::create(filename).context(IoError).context(err.clone())?);
+    let file = io::BufWriter::new(fs::File::create(filename).context(IoError).context(err.clone())?);
     let mut psdb = PwsafeWriter::new(file, 2048, db_password.as_bytes()).context(IoError).context(err.clone())?;
     let empty = [0u8, 0];
 

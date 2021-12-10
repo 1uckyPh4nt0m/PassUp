@@ -1,16 +1,19 @@
+use std::{io, result, str};
+use std::sync::mpsc::channel;
+
 use libaes::Cipher;
 use rusqlite::{Connection, params};
 use openssl::{pkcs5::pbkdf2_hmac, hash};
+use snafu::{ResultExt, Snafu};
+
+use crate::keyring;
 use crate::utils::{self, get_pw, DBEntry, DB, run_update_threads};
 use crate::config::{Configuration, ProfileTypes, Source};
-use snafu::{ResultExt, Snafu};
-use std::sync::mpsc::channel;
-use crate::keyring;
 
 #[derive(Debug, Snafu)]
 enum LibraryError {
-    IoError { source: std::io::Error },
-    Utf8Error { source: std::str::Utf8Error },
+    IoError { source: io::Error },
+    Utf8Error { source: str::Utf8Error },
     SqliteError { source: rusqlite::Error },
     OpensslError { source: openssl::error::ErrorStack },
     KeyringError { source: keyring::Error },
@@ -33,7 +36,7 @@ enum Error {
     LibError { source: LibraryError }
 }
 
-type Result<T, E = Error> = std::result::Result<T, E>;
+type Result<T, E = Error> = result::Result<T, E>;
 
 #[derive(Debug)]
 struct Login {
@@ -144,7 +147,7 @@ fn decrypt_and_parse_db(type_: &ProfileTypes, source: &Source) -> Result<(DB, Ve
         let encrypted_password: Vec<u8> = login.password;
         version = encrypted_password[0..3].to_ascii_lowercase();
         let decrypted_u8 = cipher(false, &encrypted_password[3..], &version, type_)?;
-        let password = std::str::from_utf8(&decrypted_u8).context(Utf8Error).context(StringConversionError)?;
+        let password = str::from_utf8(&decrypted_u8).context(Utf8Error).context(StringConversionError)?;
 
         db_vec.push(DBEntry::new(login.origin_url, login.username, password.to_owned(), get_pw().context(UtilsError).context(LibError)?));
     }
