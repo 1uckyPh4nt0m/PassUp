@@ -130,45 +130,43 @@ fn parse_kdbx_db(db: &Database) -> Result<DB> {
         db_vec.push(db_entry);
     }
 
-    db_vec = remove_references(db_vec)?;
+    db_vec = resolve_references(&db_vec)?;
 
     Ok(DB::new(db_vec))
 }
 
-fn remove_references(db_vec: Vec<DBEntry>) -> Result<Vec<DBEntry>>{
+/// Fetch X from string “{REF:” X “}” and look up X in collection of DBEntry.
+/// Then replace X by getter(db_entry) recursively until prefixes and suffixes
+/// do not match anymore.
+fn trim_and_substitute(text: &str, db_entries: &Vec<DBEntry>, getter: fn (DBEntry) -> String) -> Result<String> {
+    let prefix = "{REF:";
+    let suffix = '}';
+
+    if !(text.starts_with(prefix) && text.ends_with(suffix)) {
+        return Ok(text.to_owned());
+    }
+
+    let mid = text.strip_prefix(prefix).unwrap().strip_suffix(suffix).unwrap();
+    let resolved = get_ref_entry(mid, &db_entries)?;
+
+    trim_and_substitute(&getter(resolved), db_entries, getter)
+}
+
+fn resolve_references(db_vec: &Vec<DBEntry>) -> Result<Vec<DBEntry>>{
     let mut db_vec_wo_refs = Vec::new();
-    let reference_prefix = "{REF:";
-    let db_vec_clone = db_vec.clone();
-    for mut entry in db_vec {
-        let mut iter_count = 0;
-        // TODO redundant code
-        while entry.username_.starts_with(reference_prefix) && iter_count < 1000 {
-            let username_ref = entry.username_.strip_prefix(reference_prefix).unwrap().strip_suffix('}').unwrap().to_owned();
-            let ref_entry = get_ref_entry(username_ref, &db_vec_clone)?;
-            entry.username_ = ref_entry.username_.to_owned();
-            iter_count += 1;
-        }
-        iter_count = 0;
-        while entry.old_password_.starts_with(reference_prefix) && iter_count < 1000 {
-            let password_ref = entry.old_password_.strip_prefix(reference_prefix).unwrap().strip_suffix('}').unwrap().to_owned();
-            let ref_entry = get_ref_entry(password_ref, &db_vec_clone)?;
-            entry.old_password_ = ref_entry.old_password_.to_owned();
-            iter_count += 1
-        }
-        iter_count = 0;
-        while entry.url_.starts_with(reference_prefix) && iter_count < 1000 {
-            let url_ref = entry.url_.strip_prefix(reference_prefix).unwrap().strip_suffix('}').unwrap().to_owned();
-            let ref_entry = get_ref_entry(url_ref, &db_vec_clone)?;
-            entry.url_ = ref_entry.url_.to_owned();
-            iter_count += 1;
-        }
-        db_vec_wo_refs.push(entry);
+
+    for entry in db_vec {
+        let mut resolved_entry = entry.clone();
+        resolved_entry.username_ = trim_and_substitute(&entry.username_, db_vec, |e| { e.username_ })?;
+        resolved_entry.old_password_ = trim_and_substitute(&entry.old_password_, db_vec, |e| { e.old_password_ })?;
+        resolved_entry.new_password_ = trim_and_substitute(&entry.new_password_, db_vec, |e| { e.new_password_ })?;
+        db_vec_wo_refs.push(resolved_entry);
     }
 
     Ok(db_vec_wo_refs)
 }
 
-fn get_ref_entry(reference: String, db_vec_clone: &[DBEntry]) -> Result<DBEntry>{
+fn get_ref_entry(reference: &str, db_vec_clone: &[DBEntry]) -> Result<DBEntry>{
     let ref_vec: Vec<&str> = reference.split(|c| c == '@' || c == ':').collect();
     let text = ref_vec[2].to_owned();
 
