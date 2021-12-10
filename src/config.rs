@@ -1,14 +1,13 @@
-use std::{fmt, fs, io, usize, result};
 use std::collections::HashMap;
+use std::{fmt, fs, io, result, usize};
 
-use toml::Value;
 use snafu::{ResultExt, Snafu};
-
+use toml::Value;
 
 #[derive(Debug, PartialEq)]
 pub enum BrowserType {
     Firefox,
-    Chrome
+    Chrome,
 }
 
 impl fmt::Display for BrowserType {
@@ -20,7 +19,6 @@ impl fmt::Display for BrowserType {
     }
 }
 
-
 #[derive(Debug)]
 pub struct Configuration {
     pub browser_type_: BrowserType,
@@ -29,11 +27,29 @@ pub struct Configuration {
     pub profile_: Profile,
     pub sources_: Vec<Source>,
     pub scripts_: Vec<Script>,
-    pub urls_: HashMap<String, String>
+    pub urls_: HashMap<String, String>,
 }
 
 impl Configuration {
-    pub fn new(browser_type_: BrowserType, nr_threads_: usize, active_profile_: String, profile_: Profile, sources_: Vec<Source>, scripts_: Vec<Script>, urls_: HashMap<String, String>) -> Self { Self { browser_type_, nr_threads_, active_profile_, profile_, sources_, scripts_, urls_ } }
+    pub fn new(
+        browser_type_: BrowserType,
+        nr_threads_: usize,
+        active_profile_: String,
+        profile_: Profile,
+        sources_: Vec<Source>,
+        scripts_: Vec<Script>,
+        urls_: HashMap<String, String>,
+    ) -> Self {
+        Self {
+            browser_type_,
+            nr_threads_,
+            active_profile_,
+            profile_,
+            sources_,
+            scripts_,
+            urls_,
+        }
+    }
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -60,34 +76,42 @@ impl fmt::Display for ProfileTypes {
 #[derive(Debug)]
 pub struct Profile {
     pub type_: ProfileTypes,
-    pub sources_: Vec<String>
+    pub sources_: Vec<String>,
 }
 
 impl Profile {
-    pub fn new(type_: ProfileTypes, sources_: Vec<String>) -> Self { Self { type_, sources_ } }
+    pub fn new(type_: ProfileTypes, sources_: Vec<String>) -> Self {
+        Self { type_, sources_ }
+    }
 }
-
 
 #[derive(Debug)]
 pub struct Source {
     pub name_: String,
     pub file_: String,
-    pub blocklist_: Vec<String>
+    pub blocklist_: Vec<String>,
 }
 
 impl Source {
-    pub fn new(name_: String, file_: String, blocklist_: Vec<String>) -> Self { Self { name_, file_, blocklist_ } }
+    pub fn new(name_: String, file_: String, blocklist_: Vec<String>) -> Self {
+        Self {
+            name_,
+            file_,
+            blocklist_,
+        }
+    }
 }
-
 
 #[derive(Debug, Clone)]
 pub struct Script {
     pub dir_: String,
-    pub blocklist_: Vec<String>
+    pub blocklist_: Vec<String>,
 }
 
 impl Script {
-    pub fn new(dir_: String, blocklist_: Vec<String>) -> Self { Self { dir_, blocklist_ } }
+    pub fn new(dir_: String, blocklist_: Vec<String>) -> Self {
+        Self { dir_, blocklist_ }
+    }
 }
 
 const ALLOWED_PROFILE_TYPES: [&str; 5] = ["kdbx", "pass", "pwsafe", "chrome-gnome", "chrome-kde"];
@@ -98,9 +122,15 @@ pub enum Error {
     //*********************************************************************************
     //Config Errors
     #[snafu(display("Could not open config from \'{}\': {}", path, source))]
-    ConfigOpen { path: String, source: io::Error },
+    ConfigOpen {
+        path: String,
+        source: io::Error,
+    },
     #[snafu(display("Config file from \'{}\' is not a valid toml file: {}", path, source))]
-    ConfigWrongFormat { path: String, source: toml::de::Error },
+    ConfigWrongFormat {
+        path: String,
+        source: toml::de::Error,
+    },
     #[snafu(display("Wrong browser type set in config file"))]
     ConfigBrowserTypeWrong,
     #[snafu(display("Missing browser type field in config file"))]
@@ -109,25 +139,36 @@ pub enum Error {
     //*********************************************************************************
     //Active Profile Errors
     #[snafu(display("Active profile field missing in configuration file \'{}\'", path))]
-    ActiveProfileMissingField { path: String },
+    ActiveProfileMissingField {
+        path: String,
+    },
     //*********************************************************************************
     //Profile Errors
     #[snafu(display("Profile field missing in config file \'{}\'", path))]
-    ProfileNotFound { path: String },
+    ProfileNotFound {
+        path: String,
+    },
     #[snafu(display("Profile is not a valid toml table"))]
     ProfileWrongFormat,
     #[snafu(display("Active profile is not present in the config file \'{}\'", path))]
-    ProfileAPNotPresent { path: String },
+    ProfileAPNotPresent {
+        path: String,
+    },
     #[snafu(display("Profile type missing"))]
     ProfileTypeMissing,
-    #[snafu(display("Wrong profile type, choose one of the following: {:?}", ALLOWED_PROFILE_TYPES))]
+    #[snafu(display(
+        "Wrong profile type, choose one of the following: {:?}",
+        ALLOWED_PROFILE_TYPES
+    ))]
     ProfileTypeWrong,
     #[snafu(display("Profile does not contain sources"))]
     ProfileSourcesMissing,
     //*********************************************************************************
     //Sources Errors
     #[snafu(display("Sources missing in config file \'{}\'", path))]
-    SourcesNotFound { path: String },
+    SourcesNotFound {
+        path: String,
+    },
     #[snafu(display("Sources is not a valid toml array"))]
     SourcesWrongFormat,
     #[snafu(display("Missing name field in sources"))]
@@ -144,10 +185,12 @@ pub enum Error {
     #[snafu(display("Missing dir field in scripts"))]
     ScriptsDirMissing,
     #[snafu(display("Script dir \'{}\' not present on system!", dir))]
-    ScriptsDirNotPresent { dir: String }
+    ScriptsDirNotPresent {
+        dir: String,
+    },
 }
 
-type Result<T, E=Error> = result::Result<T, E>;
+type Result<T, E = Error> = result::Result<T, E>;
 
 pub fn parse_config(path: &str) -> Result<Configuration> {
     let config_r = fs::read(path).context(ConfigOpen { path })?;
@@ -158,10 +201,13 @@ pub fn parse_config(path: &str) -> Result<Configuration> {
 
     let config: Value = toml::from_str(&config_str).context(ConfigWrongFormat { path })?;
 
-    let browser_type_s = config.get("browser_type")
-                                    .ok_or(Error::ConfigBrowserTypeMissing)?.as_str()
-                                    .ok_or(Error::ConfigBrowserTypeWrong)?.to_owned()
-                                    .to_ascii_lowercase();
+    let browser_type_s = config
+        .get("browser_type")
+        .ok_or(Error::ConfigBrowserTypeMissing)?
+        .as_str()
+        .ok_or(Error::ConfigBrowserTypeWrong)?
+        .to_owned()
+        .to_ascii_lowercase();
 
     let browser_type;
     if browser_type_s == BrowserType::Firefox.to_string() {
@@ -172,24 +218,40 @@ pub fn parse_config(path: &str) -> Result<Configuration> {
         return Err(Error::ConfigBrowserTypeWrong);
     }
 
-    let nr_threads = config.get("nr_threads")
-                                .unwrap_or(&Value::Integer(1))
-                                .as_integer().unwrap_or(1).abs() as usize;
+    let nr_threads = config
+        .get("nr_threads")
+        .unwrap_or(&Value::Integer(1))
+        .as_integer()
+        .unwrap_or(1)
+        .abs() as usize;
 
-    let active_profile_v = config.get("active_profile").ok_or(Error::ActiveProfileMissingField { path:path.to_owned() })?;
+    let active_profile_v =
+        config
+            .get("active_profile")
+            .ok_or(Error::ActiveProfileMissingField {
+                path: path.to_owned(),
+            })?;
     let active_profile = active_profile_v.to_string().replace("\"", "");
 
-    let mut profile_v = config.get("profile").ok_or(Error::ProfileNotFound { path:path.to_owned() })?;
+    let mut profile_v = config.get("profile").ok_or(Error::ProfileNotFound {
+        path: path.to_owned(),
+    })?;
     let profile_m = profile_v.as_table().ok_or(Error::ProfileWrongFormat)?;
-    profile_v = profile_m.get(&active_profile).ok_or(Error::ProfileAPNotPresent { path:path.to_owned() })?;
+    profile_v = profile_m
+        .get(&active_profile)
+        .ok_or(Error::ProfileAPNotPresent {
+            path: path.to_owned(),
+        })?;
     let profile = parse_profile(profile_v)?;
 
     let temp = Value::Array(vec![]);
     let sources_v = match config.get("sources") {
         Some(source) => source,
         None => {
-            if profile.type_== ProfileTypes::Kdbx {
-                return Err(Error::SourcesNotFound { path:path.to_owned() });
+            if profile.type_ == ProfileTypes::Kdbx {
+                return Err(Error::SourcesNotFound {
+                    path: path.to_owned(),
+                });
             }
             &temp
         }
@@ -206,7 +268,7 @@ pub fn parse_config(path: &str) -> Result<Configuration> {
                 }
             }
             Err(Error::SourcesIgnore) => continue,
-            Err(err) => eprintln!("Warning: {}", err)
+            Err(err) => eprintln!("Warning: {}", err),
         };
     }
 
@@ -217,25 +279,33 @@ pub fn parse_config(path: &str) -> Result<Configuration> {
     for script in scripts_vec {
         match parse_script(script) {
             Ok(script) => scripts.push(script),
-            Err(err) => eprintln!("Warning: {}", err)
+            Err(err) => eprintln!("Warning: {}", err),
         };
     }
 
     let urls_r = match config.get("urls") {
         Some(urls) => urls.as_table(),
-        None => None
+        None => None,
     };
     let temp = toml::map::Map::new();
     let urls_t = match urls_r {
         Some(urls) => urls,
-        None => &temp
+        None => &temp,
     };
     let mut urls = HashMap::new();
-    for (k,e) in urls_t {
+    for (k, e) in urls_t {
         urls.insert(k.to_string(), e.to_string().replace("\"", ""));
     }
 
-    Ok(Configuration::new(browser_type, nr_threads, active_profile, profile, sources, scripts, urls))
+    Ok(Configuration::new(
+        browser_type,
+        nr_threads,
+        active_profile,
+        profile,
+        sources,
+        scripts,
+        urls,
+    ))
 }
 
 fn create_profiletype_map() -> HashMap<String, ProfileTypes> {
@@ -266,7 +336,9 @@ fn parse_profile(profile: &Value) -> Result<Profile> {
     }
 
     let profile_type_map = create_profiletype_map();
-    let type_ = profile_type_map.get(&type_s_).ok_or(Error::ProfileTypeWrong)?;
+    let type_ = profile_type_map
+        .get(&type_s_)
+        .ok_or(Error::ProfileTypeWrong)?;
     Ok(Profile::new((*type_).clone(), sources))
 }
 
@@ -310,7 +382,7 @@ fn parse_blocklist(value: &Value) -> Vec<String> {
     let blocklist_r = value.get("blocklist").map(|b| b.as_array()).flatten();
     let blocklist_v = match blocklist_r {
         Some(b) => b.to_vec(),
-        None => Vec::new()
+        None => Vec::new(),
     };
 
     let mut blocklist = Vec::new();

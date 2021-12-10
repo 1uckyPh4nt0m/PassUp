@@ -1,14 +1,14 @@
-use std::{io, result, str};
 use std::sync::mpsc::channel;
+use std::{io, result, str};
 
 use libaes::Cipher;
-use rusqlite::{Connection, params};
-use openssl::{pkcs5::pbkdf2_hmac, hash};
+use openssl::{hash, pkcs5::pbkdf2_hmac};
+use rusqlite::{params, Connection};
 use snafu::{ResultExt, Snafu};
 
-use crate::keyring;
-use crate::utils::{self, get_pw, DBEntry, DB, run_update_threads};
 use crate::config::{Configuration, ProfileTypes, Source};
+use crate::keyring;
+use crate::utils::{self, get_pw, run_update_threads, DBEntry, DB};
 
 #[derive(Debug, Snafu)]
 enum LibraryError {
@@ -23,17 +23,33 @@ enum LibraryError {
 #[derive(Debug, Snafu)]
 enum Error {
     #[snafu(display("Could not open DB saved at {}, {}", file, source))]
-    DBOpenError { file: String, source: LibraryError },
+    DBOpenError {
+        file: String,
+        source: LibraryError,
+    },
     #[snafu(display("Could not prepare SQL Statement, {}", source))]
-    SqlStatementError { source: LibraryError },
+    SqlStatementError {
+        source: LibraryError,
+    },
     #[snafu(display("Could not retrieve the {}, {}", row_name, source))]
-    RowError { row_name: String, source: LibraryError },
+    RowError {
+        row_name: String,
+        source: LibraryError,
+    },
     #[snafu(display("Could not query needed information, {}", source))]
-    SqlQueryError { source: LibraryError },
+    SqlQueryError {
+        source: LibraryError,
+    },
     CredentialError,
-    Pbkdf2Error { source: LibraryError },
-    StringConversionError { source: LibraryError },
-    LibError { source: LibraryError }
+    Pbkdf2Error {
+        source: LibraryError,
+    },
+    StringConversionError {
+        source: LibraryError,
+    },
+    LibError {
+        source: LibraryError,
+    },
 }
 
 type Result<T, E = Error> = result::Result<T, E>;
@@ -42,7 +58,7 @@ type Result<T, E = Error> = result::Result<T, E>;
 struct Login {
     origin_url: String,
     username: String,
-    password: Vec<u8>
+    password: Vec<u8>,
 }
 
 pub fn run(config: &Configuration) {
@@ -72,11 +88,17 @@ pub fn run(config: &Configuration) {
 
             let mut db_entry = thread_result.db_entry_;
             if output.status.success() {
-                println!("Updated password on website {}, with username {}", &db_entry.url_, &db_entry.username_);
+                println!(
+                    "Updated password on website {}, with username {}",
+                    &db_entry.url_, &db_entry.username_
+                );
                 db_vec.push(db_entry);
             } else {
                 let db_entry_ = db_entry.clone();
-                let err = utils::Error::NightwatchExecError { db_entry: db_entry_, output};
+                let err = utils::Error::NightwatchExecError {
+                    db_entry: db_entry_,
+                    output,
+                };
                 eprintln!("{}", err);
                 db_entry.new_password_ = db_entry.old_password_.to_owned();
                 db_vec.push(db_entry);
@@ -102,13 +124,25 @@ fn cipher(encrypt: bool, text: &[u8], version: &[u8], type_: &ProfileTypes) -> R
     if version == b"v10" {
         pass = b"peanuts".to_vec();
     } else if type_.eq(&ProfileTypes::ChromeG) {
-        pass = keyring::get_chrome_password().context(KeyringError).context(LibError)?.as_bytes().to_vec();
+        pass = keyring::get_chrome_password()
+            .context(KeyringError)
+            .context(LibError)?
+            .as_bytes()
+            .to_vec();
     } else {
         pass = b"".to_vec();
     }
 
     let mut key = [32u8; 16];
-    pbkdf2_hmac(&pass, salt, iterations, hash::MessageDigest::sha1(), &mut key).context(OpensslError).context(Pbkdf2Error)?;
+    pbkdf2_hmac(
+        &pass,
+        salt,
+        iterations,
+        hash::MessageDigest::sha1(),
+        &mut key,
+    )
+    .context(OpensslError)
+    .context(Pbkdf2Error)?;
     let cipher = Cipher::new_128(&key);
 
     let mut result = Vec::new();
@@ -123,44 +157,75 @@ fn cipher(encrypt: bool, text: &[u8], version: &[u8], type_: &ProfileTypes) -> R
 }
 
 fn decrypt_and_parse_db(type_: &ProfileTypes, source: &Source) -> Result<(DB, Vec<u8>)> {
-    let sql_db = Connection::open(&source.file_).context(SqliteError).context(DBOpenError { file: source.file_.to_owned() })?;
+    let sql_db = Connection::open(&source.file_)
+        .context(SqliteError)
+        .context(DBOpenError {
+            file: source.file_.to_owned(),
+        })?;
 
-    let mut stmt = sql_db.prepare("SELECT action_url, username_value, password_value FROM logins").context(SqliteError).context(SqlStatementError)?;
-    let login_iter = stmt.query_map([], |row| {
-        Ok(Login {
-            origin_url: row.get(0)?,
-            username: row.get(1)?,
-            password: row.get(2)?
+    let mut stmt = sql_db
+        .prepare("SELECT action_url, username_value, password_value FROM logins")
+        .context(SqliteError)
+        .context(SqlStatementError)?;
+    let login_iter = stmt
+        .query_map([], |row| {
+            Ok(Login {
+                origin_url: row.get(0)?,
+                username: row.get(1)?,
+                password: row.get(2)?,
+            })
         })
-    }).context(SqliteError).context(SqlQueryError)?;
+        .context(SqliteError)
+        .context(SqlQueryError)?;
 
     let mut version = Vec::new();
     let mut db_vec = Vec::new();
     for (i, login_) in login_iter.enumerate() {
-        let login = login_.map_err(|_| { Error::RowError{
+        let login = login_.map_err(|_| Error::RowError {
             row_name: format!("{}", i),
-            source: LibraryError::SqliteError { source: rusqlite::Error::InvalidQuery },
-        }})?;
+            source: LibraryError::SqliteError {
+                source: rusqlite::Error::InvalidQuery,
+            },
+        })?;
         if login.password.is_empty() {
             continue;
         }
         let encrypted_password: Vec<u8> = login.password;
         version = encrypted_password[0..3].to_ascii_lowercase();
         let decrypted_u8 = cipher(false, &encrypted_password[3..], &version, type_)?;
-        let password = str::from_utf8(&decrypted_u8).context(Utf8Error).context(StringConversionError)?;
+        let password = str::from_utf8(&decrypted_u8)
+            .context(Utf8Error)
+            .context(StringConversionError)?;
 
-        db_vec.push(DBEntry::new(login.origin_url, login.username, password.to_owned(), get_pw().context(UtilsError).context(LibError)?));
+        db_vec.push(DBEntry::new(
+            login.origin_url,
+            login.username,
+            password.to_owned(),
+            get_pw().context(UtilsError).context(LibError)?,
+        ));
     }
     Ok((DB::new(db_vec), version))
 }
 
 fn update_db(type_: &ProfileTypes, source: &Source, db: &DB, version: Vec<u8>) -> Result<()> {
-    let sql_db = Connection::open(&source.file_).context(SqliteError).context(DBOpenError { file: source.file_.to_owned() })?;
+    let sql_db = Connection::open(&source.file_)
+        .context(SqliteError)
+        .context(DBOpenError {
+            file: source.file_.to_owned(),
+        })?;
 
     for entry in &db.entries {
         let password_u8 = cipher(true, entry.new_password_.as_bytes(), &version, type_)?;
-        let mut query = sql_db.prepare("UPDATE logins SET password_value = ? WHERE action_url = ? AND username_value = ?").context(SqliteError).context(SqlQueryError)?;
-        query.execute(params![password_u8, entry.url_, entry.username_]).context(SqliteError).context(SqlQueryError)?;
+        let mut query = sql_db
+            .prepare(
+                "UPDATE logins SET password_value = ? WHERE action_url = ? AND username_value = ?",
+            )
+            .context(SqliteError)
+            .context(SqlQueryError)?;
+        query
+            .execute(params![password_u8, entry.url_, entry.username_])
+            .context(SqliteError)
+            .context(SqlQueryError)?;
     }
 
     Ok(())

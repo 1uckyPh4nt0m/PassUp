@@ -1,38 +1,49 @@
-use std::{fs, io, result, str};
 use std::sync::mpsc::channel;
+use std::{fs, io, result, str};
 
-use rpassword::read_password;
 use kpdb::{CompositeKey, Database, Entry};
+use rpassword::read_password;
 use snafu::{ResultExt, Snafu};
 
 use crate::config::{Configuration, Source};
-use crate::utils::{self, get_pw, DBEntry, DB, run_update_threads, Uuid};
-
+use crate::utils::{self, get_pw, run_update_threads, DBEntry, Uuid, DB};
 
 #[derive(Debug, Snafu)]
 enum LibraryError {
     IoError { source: io::Error },
     KpdbError { source: kpdb::Error },
-    UtilsError { source: utils::Error }
+    UtilsError { source: utils::Error },
 }
 
 #[derive(Debug, Snafu)]
 enum Error {
     #[snafu(display("DB was not found on the system at location: {}", file))]
-    DBNotPresent { file: String },
+    DBNotPresent {
+        file: String,
+    },
     #[snafu(display("No url was found for an entry"))]
     UrlMissing,
     #[snafu(display("Credentials are incomplete for website \'{}\'", url))]
-    CredentialMissing { url: String },
+    CredentialMissing {
+        url: String,
+    },
     #[snafu(display("Could not update \'{}\' with {}", file, source))]
-    DbUpdateFailed { file: String, source: LibraryError },
+    DbUpdateFailed {
+        file: String,
+        source: LibraryError,
+    },
     #[snafu(display("Could not open DB file \'{}\': {}", file, source))]
-    OpenFailed { file: String, source: LibraryError },
+    OpenFailed {
+        file: String,
+        source: LibraryError,
+    },
     #[snafu(display("Entry has wrong uuid type"))]
     WrongUuidType,
     #[snafu(display("Could not find referenced entry"))]
     EntryReference,
-    UtilsLibError { source: LibraryError }
+    UtilsLibError {
+        source: LibraryError,
+    },
 }
 
 type Result<T, E = Error> = result::Result<T, E>;
@@ -82,10 +93,16 @@ pub fn run(config: &Configuration) {
                 };
                 kpdb_db.root_group.remove_entry(uuid);
                 kpdb_db.root_group.add_entry(new_entry);
-                println!("Updated password on website {}, with username {}", db_entry.url_, db_entry.username_);
+                println!(
+                    "Updated password on website {}, with username {}",
+                    db_entry.url_, db_entry.username_
+                );
             } else {
                 let db_entry_ = db_entry.clone();
-                let err = utils::Error::NightwatchExecError { db_entry: db_entry_, output};
+                let err = utils::Error::NightwatchExecError {
+                    db_entry: db_entry_,
+                    output,
+                };
                 eprintln!("{}", err);
                 continue;
             }
@@ -137,7 +154,11 @@ fn parse_kdbx_db(db: &Database) -> Result<DB> {
 /// Fetch X from string “{REF:” X “}” and look up X in collection of DBEntry.
 /// Then replace X by getter(db_entry) recursively until prefixes and suffixes
 /// do not match anymore.
-fn trim_and_substitute(text: &str, db_entries: &Vec<DBEntry>, getter: fn (DBEntry) -> String) -> Result<String> {
+fn trim_and_substitute(
+    text: &str,
+    db_entries: &Vec<DBEntry>,
+    getter: fn(DBEntry) -> String,
+) -> Result<String> {
     let prefix = "{REF:";
     let suffix = '}';
 
@@ -145,27 +166,33 @@ fn trim_and_substitute(text: &str, db_entries: &Vec<DBEntry>, getter: fn (DBEntr
         return Ok(text.to_owned());
     }
 
-    let mid = text.strip_prefix(prefix).unwrap().strip_suffix(suffix).unwrap();
+    let mid = text
+        .strip_prefix(prefix)
+        .unwrap()
+        .strip_suffix(suffix)
+        .unwrap();
     let resolved = get_ref_entry(mid, &db_entries)?;
 
     trim_and_substitute(&getter(resolved), db_entries, getter)
 }
 
-fn resolve_references(db_vec: &Vec<DBEntry>) -> Result<Vec<DBEntry>>{
+fn resolve_references(db_vec: &Vec<DBEntry>) -> Result<Vec<DBEntry>> {
     let mut db_vec_wo_refs = Vec::new();
 
     for entry in db_vec {
         let mut resolved_entry = entry.clone();
-        resolved_entry.username_ = trim_and_substitute(&entry.username_, db_vec, |e| { e.username_ })?;
-        resolved_entry.old_password_ = trim_and_substitute(&entry.old_password_, db_vec, |e| { e.old_password_ })?;
-        resolved_entry.new_password_ = trim_and_substitute(&entry.new_password_, db_vec, |e| { e.new_password_ })?;
+        resolved_entry.username_ = trim_and_substitute(&entry.username_, db_vec, |e| e.username_)?;
+        resolved_entry.old_password_ =
+            trim_and_substitute(&entry.old_password_, db_vec, |e| e.old_password_)?;
+        resolved_entry.new_password_ =
+            trim_and_substitute(&entry.new_password_, db_vec, |e| e.new_password_)?;
         db_vec_wo_refs.push(resolved_entry);
     }
 
     Ok(db_vec_wo_refs)
 }
 
-fn get_ref_entry(reference: &str, db_vec_clone: &[DBEntry]) -> Result<DBEntry>{
+fn get_ref_entry(reference: &str, db_vec_clone: &[DBEntry]) -> Result<DBEntry> {
     let ref_vec: Vec<&str> = reference.split(|c| c == '@' || c == ':').collect();
     let text = ref_vec[2].to_owned();
 
@@ -178,7 +205,8 @@ fn find_entry(entries: &[DBEntry], uuid: String) -> Result<&DBEntry> {
         let current_uuid = match entry.uuid_ {
             Uuid::Kdbx(x) => Some(x),
             _ => None,
-        }.ok_or(Error::EntryReference)?;
+        }
+        .ok_or(Error::EntryReference)?;
         let uuid_ = current_uuid.0.to_string().replace("-", "");
         if uuid_.eq_ignore_ascii_case(&uuid) {
             return Ok(entry);
@@ -195,15 +223,24 @@ fn print_db_content(db: &Database) {
             Ok(entry) => entry,
             Err(_) => continue,
         };
-        println!("{}, {}, {}, {}", db_entry.url_, db_entry.username_, db_entry.old_password_, db_entry.new_password_);
+        println!(
+            "{}, {}, {}, {}",
+            db_entry.url_, db_entry.username_, db_entry.old_password_, db_entry.new_password_
+        );
     }
 }
 
 fn update_db(source: &Source, db_: &Database) -> Result<()> {
     let db = db_.clone();
-    let err = DbUpdateFailed { file: source.file_.to_owned() };
-    fs::remove_file(&source.file_).context(IoError).context(err.clone())?;
-    let mut file = fs::File::create(&source.file_).context(IoError).context(err.clone())?;
+    let err = DbUpdateFailed {
+        file: source.file_.to_owned(),
+    };
+    fs::remove_file(&source.file_)
+        .context(IoError)
+        .context(err.clone())?;
+    let mut file = fs::File::create(&source.file_)
+        .context(IoError)
+        .context(err.clone())?;
     db.save(&mut file).context(KpdbError).context(err)?;
 
     println!("Finished with {}!", &source.file_);
@@ -218,14 +255,25 @@ fn unlock_db(source: &Source) -> Result<Database> {
 
     match fs::metadata(&source.file_) {
         Ok(_) => (),
-        Err(_) => return Err(Error::DBNotPresent { file: source.file_.to_owned() })
+        Err(_) => {
+            return Err(Error::DBNotPresent {
+                file: source.file_.to_owned(),
+            })
+        }
     }
 
-    println!("Please enter password for {} at {}", source.name_, source.file_);
+    println!(
+        "Please enter password for {} at {}",
+        source.name_, source.file_
+    );
     while password_wrong {
         db_password = read_password().unwrap_or_else(|_| "".to_owned());
         let key = CompositeKey::from_password(&db_password);
-        let mut file = fs::File::open(&source.file_).context(IoError).context(OpenFailed { file: source.file_.to_owned() })?;
+        let mut file = fs::File::open(&source.file_)
+            .context(IoError)
+            .context(OpenFailed {
+                file: source.file_.to_owned(),
+            })?;
 
         db = match Database::open(&mut file, &key) {
             Ok(db) => {
