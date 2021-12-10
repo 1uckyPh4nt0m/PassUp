@@ -17,17 +17,17 @@ use regex::Regex;
 
 const FIREFOX_PORT: u16 = 4444;
 const CHROME_PORT: u16 = 9515;
-const FIREFOX_BIN: &'static str = "firefox";
-const CHROME_BIN: &'static str = "google-chrome";
-const NIGHTWATCH_BIN: &'static str = "nightwatch";
-const LOCALHOST: &'static str = "127.0.0.1";
+const FIREFOX_BIN: &str = "firefox";
+const CHROME_BIN: &str = "google-chrome";
+const NIGHTWATCH_BIN: &str = "nightwatch";
+const LOCALHOST: &str = "127.0.0.1";
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum Uuid {
     None,
     Kdbx(EntryUuid),
     Pwsafe([u8; 16])
-} 
+}
 
 #[derive(Debug, Clone)]
 pub struct DBEntry {
@@ -104,8 +104,8 @@ pub fn get_pw() -> Result<String> {
         exclude_similar_characters: true,
         spaces: false,
     };
-    pass_gen.generate_one().or_else(|err| {
-        Err(Error::PasswordGeneratorError { err })
+    pass_gen.generate_one().map_err(|err| {
+        Error::PasswordGeneratorError { err }
     })
 }
 
@@ -122,13 +122,13 @@ pub fn cmd(program: &'static str, args: &[&str], port: &str) -> Result<Output> {
 }
 
 //pub fn exec_nightwatch(script_path: &str, url: &str, db_entry: &DBEntry, browser_type: &String, port: &String) -> Result<Output> {
-pub fn exec_nightwatch(script_path: &str, db_entry: &DBEntry, browser_type: &String, port: &String) -> Result<Output> {
-    cmd(NIGHTWATCH_BIN, 
-            &["--env", browser_type, "--test", script_path, 
+pub fn exec_nightwatch(script_path: &str, db_entry: &DBEntry, browser_type: &str, port: &str) -> Result<Output> {
+    cmd(NIGHTWATCH_BIN,
+            &["--env", browser_type, "--test", script_path,
             &db_entry.username_, &db_entry.old_password_, &db_entry.new_password_], port)
 }
 
-fn get_url_check_source_blocklist(url_: &String, blocklist: &Vec<String>, urls: &HashMap<String, String>) -> Result<String> {
+fn get_url_check_source_blocklist(url_: &str, blocklist: &[String], urls: &HashMap<String, String>) -> Result<String> {
     let protocol = "((https://)|(http://)).+".to_owned();
     let re_protocol = Regex::new(&protocol).context(RegexLibError).context(RegexError { expr:protocol })?;
     let mut url_protocol = url_.to_owned();
@@ -145,20 +145,20 @@ fn get_url_check_source_blocklist(url_: &String, blocklist: &Vec<String>, urls: 
     if blocklist.contains(&target_domain) {
         return Err(Error::UrlDomainBlocked);
     }
-    
+
     let mut url = target_domain.to_owned();
     for (key, value) in urls {
-        let re = Regex::new(&key).context(RegexLibError).context(RegexError { expr:key })?;
+        let re = Regex::new(key).context(RegexLibError).context(RegexError { expr:key })?;
         if re.is_match(&target_domain) {
             url = value.to_owned();
             break;
         }
     }
 
-    return Ok(url);
+    Ok(url)
 }
 
-pub fn get_url_and_script_path(config: &Configuration, blocklist: &Vec<String>, db_entry: &DBEntry) -> Result<String> {
+pub fn get_url_and_script_path(config: &Configuration, blocklist: &[String], db_entry: &DBEntry) -> Result<String> {
     let mut path = String::new();
     for script in config.scripts_.iter() {
         let mut script_path = PathBuf::new();
@@ -191,10 +191,8 @@ pub fn check_dependencies(config: &Configuration) -> Result<()> {
             return Err(Error::DependencyMissingError { binary_name: FIREFOX_BIN, program: "Firefox"});
 
         }
-    } else if config.browser_type_ == BrowserType::Chrome {
-        if which(CHROME_BIN).is_err() {
-            return Err(Error::DependencyMissingError { binary_name: CHROME_BIN, program: "Chrome"});
-        }
+    } else if config.browser_type_ == BrowserType::Chrome && which(CHROME_BIN).is_err() {
+        return Err(Error::DependencyMissingError { binary_name: CHROME_BIN, program: "Chrome"});
     }
 
     Ok(())
@@ -204,7 +202,7 @@ pub fn check_port_available(port: u16) -> bool {
     std::net::TcpListener::bind((LOCALHOST, port)).is_ok()
 }
 
-pub fn run_update_threads(db: &DB, blocklist: &Vec<String>, config: &Configuration, tx: Sender<ThreadResult>) -> usize {
+pub fn run_update_threads(db: &DB, blocklist: &[String], config: &Configuration, tx: Sender<ThreadResult>) -> usize {
     let mut port;
     let browser_type;
     if config.browser_type_ == BrowserType::Firefox {
@@ -218,7 +216,7 @@ pub fn run_update_threads(db: &DB, blocklist: &Vec<String>, config: &Configurati
     let pool = ThreadPool::new(config.nr_threads_);
     for db_entry in db.entries.iter() {
         let entry = db_entry.clone();
-        let script_path = match get_url_and_script_path(config, blocklist, &db_entry) {
+        let script_path = match get_url_and_script_path(config, blocklist, db_entry) {
             Ok(url_path) => url_path,
             Err(utils::Error::UrlDomainBlocked) => continue,
             Err(utils::Error::ScriptBlocked) => continue,
@@ -229,7 +227,7 @@ pub fn run_update_threads(db: &DB, blocklist: &Vec<String>, config: &Configurati
         };
 
         let browser_type_ = browser_type.clone();
-        
+
         nr_jobs += 1;
         let tx = tx.clone();
         pool.execute(move || {

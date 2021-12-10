@@ -89,8 +89,8 @@ impl Script {
     pub fn new(dir_: String, blocklist_: Vec<String>) -> Self { Self { dir_, blocklist_ } }
 }
 
-const ALLOWED_PROFILE_TYPES: [&'static str; 5] = ["kdbx", "pass", "pwsafe", "chrome-gnome", "chrome-kde"];
-const PROFILE_TYPES_WITH_SOURCE: [&'static str; 4] = ["kdbx", "pwsafe", "chrome-gnome", "chrome-kde"];
+const ALLOWED_PROFILE_TYPES: [&str; 5] = ["kdbx", "pass", "pwsafe", "chrome-gnome", "chrome-kde"];
+const PROFILE_TYPES_WITH_SOURCE: [&str; 4] = ["kdbx", "pwsafe", "chrome-gnome", "chrome-kde"];
 
 #[derive(Debug, Snafu)]
 pub enum Error {
@@ -104,7 +104,7 @@ pub enum Error {
     ConfigBrowserTypeWrong,
     #[snafu(display("Missing browser type field in config file"))]
     ConfigBrowserTypeMissing,
-    
+
     //*********************************************************************************
     //Active Profile Errors
     #[snafu(display("Active profile field missing in configuration file \'{}\'", path))]
@@ -150,10 +150,10 @@ type Result<T, E=Error> = std::result::Result<T, E>;
 
 pub fn parse_config(path: &str) -> Result<Configuration> {
     let config_r = fs::read(path).context(ConfigOpen { path })?;
-    let config_str = String::from_utf8(config_r).or(Err(Error::ConfigOpen {
+    let config_str = String::from_utf8(config_r).map_err(|_| Error::ConfigOpen {
         path: path.to_string(),
         source: std::io::Error::new(std::io::ErrorKind::InvalidData, "expected UTF-8 text file"),
-    }))?;
+    })?;
 
     let config: Value = toml::from_str(&config_str).context(ConfigWrongFormat { path })?;
 
@@ -193,7 +193,7 @@ pub fn parse_config(path: &str) -> Result<Configuration> {
             &temp
         }
     };
-    
+
     let sources_vec = sources_v.as_array().ok_or(Error::SourcesWrongFormat)?;
 
     let mut sources = Vec::new();
@@ -231,7 +231,7 @@ pub fn parse_config(path: &str) -> Result<Configuration> {
     };
     let mut urls = HashMap::new();
     for (k,e) in urls_t {
-        urls.insert(*k, e.to_string().replace("\"", ""));
+        urls.insert(k.to_string(), e.to_string().replace("\"", ""));
     }
 
     Ok(Configuration::new(browser_type, nr_threads, active_profile, profile, sources, scripts, urls))
@@ -251,7 +251,7 @@ fn create_profiletype_map() -> HashMap<String, ProfileTypes> {
 fn parse_profile(profile: &Value) -> Result<Profile> {
     let type_v = profile.get("type").ok_or(Error::ProfileTypeMissing)?;
     let type_s_ = type_v.to_string().replace("\"", "");
-   
+
     if !ALLOWED_PROFILE_TYPES.contains(&type_s_.as_str()) {
         return Err(Error::ProfileTypeWrong);
     }
@@ -280,7 +280,7 @@ fn parse_source(source: &Value, profile: &Profile) -> Result<Source> {
     let file = match source.get("file") {
         Some(file) => file.to_string().replace("\"", ""),
         None => {
-            if PROFILE_TYPES_WITH_SOURCE.contains(format!("{}", profile.type_)) {
+            if PROFILE_TYPES_WITH_SOURCE.contains(&profile.type_.to_string().as_str()) {
                 return Err(Error::SourcesFileMissing);
             }
             "".to_owned()
@@ -302,7 +302,7 @@ fn parse_script(script: &Value) -> Result<Script> {
 
     let blocklist = parse_blocklist(script);
 
-    Ok(Script::new(dir, blocklist.clone()))
+    Ok(Script::new(dir, blocklist))
 }
 
 fn parse_blocklist(value: &Value) -> Vec<String> {
@@ -311,7 +311,7 @@ fn parse_blocklist(value: &Value) -> Vec<String> {
         Some(b) => b.to_vec(),
         None => Vec::new()
     };
-    
+
     let mut blocklist = Vec::new();
     for b in blocklist_v {
         blocklist.push(b.to_string().replace("\"", ""));

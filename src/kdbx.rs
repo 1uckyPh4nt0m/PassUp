@@ -57,7 +57,7 @@ pub fn run(config: &Configuration) {
 
         let (tx, rx) = channel();
         let nr_jobs = run_update_threads(&db, &source.blocklist_, config, tx);
-  
+
         let thread_results = rx.iter().take(nr_jobs);
         for thread_result in thread_results {
             let output = match thread_result.result_ {
@@ -81,8 +81,8 @@ pub fn run(config: &Configuration) {
                         continue;
                     }
                 };
-                (&mut kpdb_db).root_group.remove_entry(uuid);
-                (&mut kpdb_db).root_group.add_entry(new_entry);
+                kpdb_db.root_group.remove_entry(uuid);
+                kpdb_db.root_group.add_entry(new_entry);
                 println!("Updated password on website {}, with username {}", db_entry.url_, db_entry.username_);
             } else {
                 let db_entry_ = db_entry.clone();
@@ -141,22 +141,23 @@ fn remove_references(db_vec: Vec<DBEntry>) -> Result<Vec<DBEntry>>{
     let db_vec_clone = db_vec.clone();
     for mut entry in db_vec {
         let mut iter_count = 0;
+        // TODO redundant code
         while entry.username_.starts_with(reference_prefix) && iter_count < 1000 {
-            let username_ref = entry.username_.strip_prefix(reference_prefix).unwrap().strip_suffix("}").unwrap().to_owned();
+            let username_ref = entry.username_.strip_prefix(reference_prefix).unwrap().strip_suffix('}').unwrap().to_owned();
             let ref_entry = get_ref_entry(username_ref, &db_vec_clone)?;
             entry.username_ = ref_entry.username_.to_owned();
             iter_count += 1;
         }
         iter_count = 0;
         while entry.old_password_.starts_with(reference_prefix) && iter_count < 1000 {
-            let password_ref = entry.old_password_.strip_prefix(reference_prefix).unwrap().strip_suffix("}").unwrap().to_owned();
+            let password_ref = entry.old_password_.strip_prefix(reference_prefix).unwrap().strip_suffix('}').unwrap().to_owned();
             let ref_entry = get_ref_entry(password_ref, &db_vec_clone)?;
             entry.old_password_ = ref_entry.old_password_.to_owned();
             iter_count += 1
         }
         iter_count = 0;
         while entry.url_.starts_with(reference_prefix) && iter_count < 1000 {
-            let url_ref = entry.url_.strip_prefix(reference_prefix).unwrap().strip_suffix("}").unwrap().to_owned();
+            let url_ref = entry.url_.strip_prefix(reference_prefix).unwrap().strip_suffix('}').unwrap().to_owned();
             let ref_entry = get_ref_entry(url_ref, &db_vec_clone)?;
             entry.url_ = ref_entry.url_.to_owned();
             iter_count += 1;
@@ -167,7 +168,7 @@ fn remove_references(db_vec: Vec<DBEntry>) -> Result<Vec<DBEntry>>{
     Ok(db_vec_wo_refs)
 }
 
-fn get_ref_entry(reference: String, db_vec_clone: &Vec<DBEntry>) -> Result<DBEntry>{
+fn get_ref_entry(reference: String, db_vec_clone: &[DBEntry]) -> Result<DBEntry>{
     let ref_vec: Vec<&str> = reference.split(|c| c == '@' || c == ':').collect();
     let text = ref_vec[2].to_owned();
 
@@ -175,7 +176,7 @@ fn get_ref_entry(reference: String, db_vec_clone: &Vec<DBEntry>) -> Result<DBEnt
     Ok(ref_entry.clone())
 }
 
-fn find_entry(entries: &Vec<DBEntry>, uuid: String) -> Result<&DBEntry> {
+fn find_entry(entries: &[DBEntry], uuid: String) -> Result<&DBEntry> {
     for entry in entries {
         let current_uuid = match entry.uuid_ {
             Uuid::Kdbx(x) => Some(x),
@@ -202,11 +203,11 @@ fn print_db_content(db: &Database) {
 }
 
 fn update_db(source: &Source, db_: &Database) -> Result<()> {
-    let mut db = db_.clone();
+    let db = db_.clone();
     let err = DbUpdateFailed { file: source.file_.to_owned() };
     std::fs::remove_file(&source.file_).context(IoError).context(err.clone())?;
     let mut file = fs::File::create(&source.file_).context(IoError).context(err.clone())?;
-    (&mut db).save(&mut file).context(KpdbError).context(err)?;
+    db.save(&mut file).context(KpdbError).context(err)?;
 
     println!("Finished with {}!", &source.file_);
     Ok(())
@@ -225,7 +226,7 @@ fn unlock_db(source: &Source) -> Result<Database> {
 
     println!("Please enter password for {} at {}", source.name_, source.file_);
     while password_wrong {
-        db_password = read_password().unwrap_or("".to_owned());
+        db_password = read_password().unwrap_or_else(|_| "".to_owned());
         let key = CompositeKey::from_password(&db_password);
         let mut file = fs::File::open(&source.file_).context(IoError).context(OpenFailed { file: source.file_.to_owned() })?;
 

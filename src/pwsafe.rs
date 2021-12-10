@@ -49,10 +49,10 @@ pub fn run(config: &Configuration) {
                 continue;
             }
         };
-        
+
         let (tx, rx) = channel();
         let nr_jobs = run_update_threads(&db, &source.blocklist_, config, tx);
-        
+
         let mut updated_entries = Vec::new();
         let thread_results = rx.iter().take(nr_jobs);
         for thread_result in thread_results {
@@ -97,7 +97,7 @@ pub fn unlock_and_parse_db(source: &Source) -> Result<(DB, String, u16, Vec<(u8,
     let mut db_password = String::new();
 
     while password_wrong {
-        db_password = read_password().unwrap_or("".to_owned());
+        db_password = read_password().unwrap_or_else(|_| "".to_owned());
         let file = File::open(&source.file_).context(IoError).context(OpenFailed { file: source.file_.to_owned() })?;
         let breader_file = BufReader::new(file);
         let mut psdb = match PwsafeReader::new(breader_file, db_password.as_bytes()) {
@@ -141,9 +141,9 @@ pub fn unlock_and_parse_db(source: &Source) -> Result<(DB, String, u16, Vec<(u8,
 
             let record = match PwsafeRecordField::new(field_type, field_data.clone()) {
                 Ok(r) => r,
-                Err(e) => { 
-                    eprintln!("{}", e); 
-                    continue 
+                Err(e) => {
+                    eprintln!("{}", e);
+                    continue
                 }
             };
             record_vec.push((field_type, field_data));
@@ -182,21 +182,21 @@ pub fn update_db(source: &Source, db: &DB, db_password: String, records: Vec<(u8
 
     psdb.write_field(0x00, &[version as u8, (version >> 8) as u8]).context(IoError).context(err.clone())?; // Version field
     psdb.write_field(0xff, &empty).context(IoError).context(err.clone())?; // End of header
-    
+
     let mut db_entry = DBEntry::empty();
 
     for (record_type, mut record_data) in records {
         let record = match PwsafeRecordField::new(record_type, record_data.clone()) {
             Ok(r) => r,
-            Err(e) => { 
-                eprintln!("Warning: {}", e); 
-                continue 
+            Err(e) => {
+                eprintln!("Warning: {}", e);
+                continue
             }
         };
         match &record {
             PwsafeRecordField::Uuid(uuid) => {
                 for entry in db.entries.iter() {
-                    if Uuid::Pwsafe(uuid.to_owned()) == entry.uuid_.to_owned() {
+                    if Uuid::Pwsafe(uuid.to_owned()) == entry.uuid_ {
                         db_entry = entry.to_owned();
                     }
                 }
@@ -209,6 +209,6 @@ pub fn update_db(source: &Source, db: &DB, db_password: String, records: Vec<(u8
     }
 
     psdb.finish().context(IoError).context(err.clone())?;
-    fs::remove_file(&filename_copy).context(IoError).context(err.clone())?;
+    fs::remove_file(&filename_copy).context(IoError).context(err)?;
     Ok(())
 }

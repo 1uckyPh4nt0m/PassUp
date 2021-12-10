@@ -30,7 +30,7 @@ pub enum Error {
 
 type Result<T, E=Error> = std::result::Result<T, E>;
 
-pub fn run(config: &Configuration) { 
+pub fn run(config: &Configuration) {
     let db = match parse_pass() {
         Ok(result) => result,
         Err(err) => {
@@ -48,7 +48,7 @@ pub fn run(config: &Configuration) {
 
     let (tx, rx) = channel();
     let nr_jobs = run_update_threads(&db, &blocklist, config, tx);
-    
+
     let thread_results = rx.iter().take(nr_jobs);
     for thread_result in thread_results {
         let output = match thread_result.result_ {
@@ -56,7 +56,7 @@ pub fn run(config: &Configuration) {
             Err(err) => {
                 eprintln!("Warning: {}", err);
                 continue;
-            } 
+            }
         };
 
         let db_entry = thread_result.db_entry_;
@@ -90,7 +90,7 @@ fn parse_pass() -> Result<utils::DB> {
         Some(path) => path.to_owned(),
         None => return Err(Error::PathToStrError)
     };
-    
+
     let mut db = Vec::new();
 
     let outer_dir = fs::read_dir(&path).context(IoError).context(PassStoreNotFound { path:path_s })?;
@@ -106,10 +106,10 @@ fn parse_pass() -> Result<utils::DB> {
             Some(dir) => dir.to_owned(),
             None => continue
         };
-        if url.starts_with(".") {
+        if url.starts_with('.') {
             continue;
         }
-        if url == "" {
+        if url.is_empty() {
             break;
         }
         path.push(&url);
@@ -155,7 +155,7 @@ fn parse_pass() -> Result<utils::DB> {
                     continue;
                 }
             };
-            
+
             let new_password = utils::get_pw().context(UtilsError).context(PassGenError)?;
             let entry = utils::DBEntry::new(url.clone(), username, password, new_password);
             db.push(entry);
@@ -179,14 +179,14 @@ fn update_pass_entry(db_entry_: &utils::DBEntry) -> Result<()> {
             Ok(pass) => pass,
             Err(_) => return Err(Error::PassUpdateError { db_entry })
     };
-    
+
     let pass_input = format!("{}\n{}", db_entry.new_password_, db_entry.new_password_);
     let echo = match Command::new("echo")
         .arg(pass_input)
         .stdout(match pass.stdin {
             Some(stdin) => stdin,
             None => return Err(Error::PassUpdateError { db_entry })
-        }) 
+        })
         .output() {
             Ok(echo) => echo,
             Err(_) => return Err(Error::PassUpdateError { db_entry })

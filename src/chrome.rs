@@ -51,10 +51,10 @@ pub fn run(config: &Configuration) {
                 continue;
             }
         };
-    
+
         let (tx, rx) = channel();
         let nr_jobs = run_update_threads(&db, &source.blocklist_, config, tx);
-    
+
         let mut db_vec = Vec::new();
 
         let thread_results = rx.iter().take(nr_jobs);
@@ -81,7 +81,7 @@ pub fn run(config: &Configuration) {
         }
         let updated_db = DB::new(db_vec);
 
-        match update_db(&config.profile_.type_, &source, &updated_db, version) {
+        match update_db(&config.profile_.type_, source, &updated_db, version) {
             Ok(_) => (),
             Err(err) => {
                 eprintln!("Error: {}", err);
@@ -91,19 +91,17 @@ pub fn run(config: &Configuration) {
     }
 }
 
-fn cipher(encrypt: bool, text: Vec<u8>, version: &Vec<u8>, type_: &ProfileTypes) -> Result<Vec<u8>> {
+fn cipher(encrypt: bool, text: &[u8], version: &[u8], type_: &ProfileTypes) -> Result<Vec<u8>> {
     let salt = b"saltysalt";
     let iv = [32u8; 16];
     let iterations = 1;
     let pass;
     if version == b"v10" {
         pass = b"peanuts".to_vec();
+    } else if type_.eq(&ProfileTypes::ChromeG) {
+        pass = keyring::get_chrome_password().context(KeyringError).context(LibError)?.as_bytes().to_vec();
     } else {
-        if type_.eq(&ProfileTypes::ChromeG) {
-            pass = keyring::get_chrome_password().context(KeyringError).context(LibError)?.as_bytes().to_vec();
-        } else {
-            pass = b"".to_vec();
-        }
+        pass = b"".to_vec();
     }
 
     let mut key = [32u8; 16];
@@ -113,11 +111,11 @@ fn cipher(encrypt: bool, text: Vec<u8>, version: &Vec<u8>, type_: &ProfileTypes)
     let mut result = Vec::new();
     if encrypt {
         result.append(&mut version.to_vec());
-        result.append(&mut cipher.cbc_encrypt(&iv, &text));
+        result.append(&mut cipher.cbc_encrypt(&iv, text));
     } else {
-        result = cipher.cbc_decrypt(&iv, &text); 
+        result = cipher.cbc_decrypt(&iv, text);
     }
-   
+
     Ok(result)
 }
 
@@ -136,22 +134,18 @@ fn decrypt_and_parse_db(type_: &ProfileTypes, source: &Source) -> Result<(DB, Ve
     let mut version = Vec::new();
     let mut db_vec = Vec::new();
     for (i, login_) in login_iter.enumerate() {
-        let login = match login_ {
-            Ok(l) => l,
-            Err(e) => return Err(Error::RowError{
-                row_name: format!("{}", i),
-                source: LibraryError::SqliteError { source: rusqlite::Error::InvalidQuery },
-            }),
-        };
+        let login = login_.map_err(|_| { Error::RowError{
+            row_name: format!("{}", i),
+            source: LibraryError::SqliteError { source: rusqlite::Error::InvalidQuery },
+        }})?;
         if login.password.is_empty() {
             continue;
         }
-        let mut encrypted_password = login.password;
+        let encrypted_password: Vec<u8> = login.password;
         version = encrypted_password[0..3].to_ascii_lowercase();
-        encrypted_password = encrypted_password[3..].to_vec(); 
-        let decrypted_u8 = cipher(false, encrypted_password, &version, type_)?;
+        let decrypted_u8 = cipher(false, &encrypted_password[3..], &version, type_)?;
         let password = std::str::from_utf8(&decrypted_u8).context(Utf8Error).context(StringConversionError)?;
-        
+
         db_vec.push(DBEntry::new(login.origin_url, login.username, password.to_owned(), get_pw().context(UtilsError).context(LibError)?));
     }
     Ok((DB::new(db_vec), version))
@@ -161,7 +155,7 @@ fn update_db(type_: &ProfileTypes, source: &Source, db: &DB, version: Vec<u8>) -
     let sql_db = Connection::open(&source.file_).context(SqliteError).context(DBOpenError { file: source.file_.to_owned() })?;
 
     for entry in &db.entries {
-        let password_u8 = cipher(true, entry.new_password_.as_bytes().to_vec(), &version, type_)?;
+        let password_u8 = cipher(true, entry.new_password_.as_bytes(), &version, type_)?;
         let mut query = sql_db.prepare("UPDATE logins SET password_value = ? WHERE action_url = ? AND username_value = ?").context(SqliteError).context(SqlQueryError)?;
         query.execute(params![password_u8, entry.url_, entry.username_]).context(SqliteError).context(SqlQueryError)?;
     }
