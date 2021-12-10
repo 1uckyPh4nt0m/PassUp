@@ -39,12 +39,7 @@ pub struct DBEntry {
 }
 
 impl DBEntry {
-    pub fn new(
-        url: String,
-        username: String,
-        old_password: String,
-        new_password: String,
-    ) -> Self {
+    pub fn new(url: String, username: String, old_password: String, new_password: String) -> Self {
         Self {
             url,
             username,

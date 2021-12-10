@@ -225,12 +225,11 @@ pub fn parse_config(path: &str) -> Result<Configuration> {
         .unwrap_or(1)
         .abs() as usize;
 
-    let active_profilev =
-        config
-            .get("active_profile")
-            .ok_or(Error::ActiveProfileMissingField {
-                path: path.to_owned(),
-            })?;
+    let active_profilev = config
+        .get("active_profile")
+        .ok_or(Error::ActiveProfileMissingField {
+            path: path.to_owned(),
+        })?;
     let active_profile = active_profilev.to_string().replace("\"", "");
 
     let mut profile_v = config.get("profile").ok_or(Error::ProfileNotFound {
