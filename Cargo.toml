@@ -7,7 +7,6 @@ edition = "2018"
 [dependencies]
 rust-kpdb = "0.4.2"
 rand = "0.8.3"
-crypt = "0.1.0"
 dirs = "4.0.0"
 clap = "2.33.3"
 toml = "0.5.8"
