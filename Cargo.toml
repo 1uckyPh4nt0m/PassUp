@@ -1,5 +1,5 @@
 [package]
-name = "PassUp"
+name = "pass-up"
 version = "0.1.0"
 authors = ["Gabriel Vukovic <gabriel.vukovic@student.tugraz.at>"]
 edition = "2018"
