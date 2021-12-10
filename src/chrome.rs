@@ -23,7 +23,7 @@ enum Error {
     DBOpenError { file: String, source: LibraryError },
     #[snafu(display("Could not prepare SQL Statement, {}", source))]
     SqlStatementError { source: LibraryError },
-    #[snafu(display("Could not retreive the {}, {}", row_name, source))]
+    #[snafu(display("Could not retrieve the {}, {}", row_name, source))]
     RowError { row_name: String, source: LibraryError },
     #[snafu(display("Could not query needed information, {}", source))]
     SqlQueryError { source: LibraryError },
@@ -118,7 +118,7 @@ fn cipher(encrypt: bool, text: Vec<u8>, version: &Vec<u8>, type_: &ProfileTypes)
         result = cipher.cbc_decrypt(&iv, &text); 
     }
    
-    return Ok(result);
+    Ok(result)
 }
 
 fn decrypt_and_parse_db(type_: &ProfileTypes, source: &Source) -> Result<(DB, Vec<u8>)> {
@@ -135,8 +135,14 @@ fn decrypt_and_parse_db(type_: &ProfileTypes, source: &Source) -> Result<(DB, Ve
 
     let mut version = Vec::new();
     let mut db_vec = Vec::new();
-    for login_ in login_iter {
-        let login = login_.unwrap();
+    for (i, login_) in login_iter.enumerate() {
+        let login = match login_ {
+            Ok(l) => l,
+            Err(e) => return Err(Error::RowError{
+                row_name: format!("{}", i),
+                source: LibraryError::SqliteError { source: rusqlite::Error::InvalidQuery },
+            }),
+        };
         if login.password.is_empty() {
             continue;
         }
@@ -148,7 +154,7 @@ fn decrypt_and_parse_db(type_: &ProfileTypes, source: &Source) -> Result<(DB, Ve
         
         db_vec.push(DBEntry::new(login.origin_url, login.username, password.to_owned(), get_pw().context(UtilsError).context(LibError)?));
     }
-    return Ok((DB::new(db_vec), version));
+    Ok((DB::new(db_vec), version))
 }
 
 fn update_db(type_: &ProfileTypes, source: &Source, db: &DB, version: Vec<u8>) -> Result<()> {

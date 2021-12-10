@@ -75,7 +75,7 @@ pub enum Error {
     #[snafu(display("Script path \'{}\' is not present", path))]
     ScriptMissingError { path: String },
     ScriptBlocked,
-    #[snafu(display("Warning: Script for website \'{}\' with username: \'{}\' did not execute succesfully\n{}", db_entry.url_, db_entry.username_, std::str::from_utf8(&output.stdout).unwrap_or("error")))]
+    #[snafu(display("Warning: Script for website \'{}\' with username: \'{}\' did not execute successfully\n{}", db_entry.url_, db_entry.username_, std::str::from_utf8(&output.stdout).unwrap_or("error")))]
     NightwatchExecError { db_entry: DBEntry, output: Output },
     #[snafu(display("The binary {} was not found! Please install {}, refer to the README.md for help", binary_name, program))]
     DependencyMissingError { binary_name: &'static str, program: &'static str },
@@ -104,10 +104,9 @@ pub fn get_pw() -> Result<String> {
         exclude_similar_characters: true,
         spaces: false,
     };
-    match pass_gen.generate_one() {
-        Ok(pw) => return Ok(pw),
-        Err(err) => return Err(Error::PasswordGeneratorError { err })
-    };
+    pass_gen.generate_one().or_else(|err| {
+        Err(Error::PasswordGeneratorError { err })
+    })
 }
 
 pub fn cmd(program: &'static str, args: &[&str], port: &str) -> Result<Output> {
@@ -180,35 +179,29 @@ pub fn get_url_and_script_path(config: &Configuration, blocklist: &Vec<String>, 
         }
         return Ok(path);
     }
-    return Err(Error::ScriptMissingError{ path });
+    Err(Error::ScriptMissingError{ path })
 }
 
 pub fn check_dependencies(config: &Configuration) -> Result<()> {
-    match which(NIGHTWATCH_BIN) {
-        Ok(_) => (),
-        Err(_) => return Err(Error::DependencyMissingError { binary_name: NIGHTWATCH_BIN, program: "Nightwatch"})
+    if which(NIGHTWATCH_BIN).is_err() {
+        return Err(Error::DependencyMissingError { binary_name: NIGHTWATCH_BIN, program: "Nightwatch"});
     }
     if config.browser_type_ == BrowserType::Firefox {
-        match which(FIREFOX_BIN) {
-            Ok(_) => (),
-            Err(_) => return Err(Error::DependencyMissingError { binary_name: FIREFOX_BIN, program: "Firefox"})
+        if which(FIREFOX_BIN).is_err() {
+            return Err(Error::DependencyMissingError { binary_name: FIREFOX_BIN, program: "Firefox"});
 
         }
     } else if config.browser_type_ == BrowserType::Chrome {
-        match which(CHROME_BIN) {
-            Ok(_) => (),
-            Err(_) => return Err(Error::DependencyMissingError { binary_name: CHROME_BIN, program: "Chrome"})
+        if which(CHROME_BIN).is_err() {
+            return Err(Error::DependencyMissingError { binary_name: CHROME_BIN, program: "Chrome"});
         }
     }
 
-    return Ok(());
+    Ok(())
 }
 
 pub fn check_port_available(port: u16) -> bool {
-    match std::net::TcpListener::bind((LOCALHOST, port)) {
-        Ok(_) => true,
-        Err(_) => false
-    }
+    std::net::TcpListener::bind((LOCALHOST, port)).is_ok()
 }
 
 pub fn run_update_threads(db: &DB, blocklist: &Vec<String>, config: &Configuration, tx: Sender<ThreadResult>) -> usize {
@@ -251,5 +244,5 @@ pub fn run_update_threads(db: &DB, blocklist: &Vec<String>, config: &Configurati
         }
     }
     pool.join();
-    return nr_jobs;
+    nr_jobs
 }

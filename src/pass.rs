@@ -73,7 +73,6 @@ pub fn run(config: &Configuration) {
             let err = utils::Error::NightwatchExecError { db_entry: db_entry_, output};
             eprintln!("{}", err);
             continue;
-
         }
     }
 }
@@ -162,7 +161,7 @@ fn parse_pass() -> Result<utils::DB> {
             db.push(entry);
         }
     }
-    return Ok(utils::DB::new(db));
+    Ok(utils::DB::new(db))
 }
 
 fn update_pass_entry(db_entry_: &utils::DBEntry) -> Result<()> {

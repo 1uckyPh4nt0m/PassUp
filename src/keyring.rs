@@ -35,5 +35,5 @@ pub fn get_chrome_password() -> Result<String> {
         return Err(Error::PasswordNotPresent);
     }
 
-    return Ok(password);
+    Ok(password)
 }

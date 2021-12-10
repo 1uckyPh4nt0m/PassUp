@@ -163,12 +163,11 @@ pub fn unlock_and_parse_db(source: &Source) -> Result<(DB, String, u16, Vec<(u8,
                 _ => ()
             };
         }
-        match psdb.verify() {
-            Ok(_) => (),
-            Err(err) => return Err(Error::VerifyDb{ file: source.file_.to_owned(), err: err.to_string() }) 
-        };
+        if let Err(err) = psdb.verify() {
+            return Err(Error::VerifyDb{ file: source.file_.to_owned(), err: err.to_string() });
+        }
     }
-    return Ok((DB::new(entry_vec), db_password, version, record_vec));
+    Ok((DB::new(entry_vec), db_password, version, record_vec))
 }
 
 pub fn update_db(source: &Source, db: &DB, db_password: String, records: Vec<(u8, Vec<u8>)>, version: u16) -> Result<()> {
@@ -211,5 +210,5 @@ pub fn update_db(source: &Source, db: &DB, db_password: String, records: Vec<(u8
 
     psdb.finish().context(IoError).context(err.clone())?;
     fs::remove_file(&filename_copy).context(IoError).context(err.clone())?;
-    return Ok(());
+    Ok(())
 }

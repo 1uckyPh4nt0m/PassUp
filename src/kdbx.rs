@@ -111,7 +111,7 @@ fn parse_db_entry(entry: &mut Entry) -> Result<DBEntry> {
     }
     let mut dbentry = DBEntry::new(url, username, old_pass, "".to_owned());
     dbentry.uuid_ = Uuid::Kdbx(entry.uuid);
-    return Ok(dbentry);
+    Ok(dbentry)
 }
 
 fn parse_kdbx_db(db: &Database) -> Result<DB> {
@@ -132,7 +132,7 @@ fn parse_kdbx_db(db: &Database) -> Result<DB> {
 
     db_vec = remove_references(db_vec)?;
 
-    return Ok(DB::new(db_vec));
+    Ok(DB::new(db_vec))
 }
 
 fn remove_references(db_vec: Vec<DBEntry>) -> Result<Vec<DBEntry>>{
@@ -153,7 +153,7 @@ fn remove_references(db_vec: Vec<DBEntry>) -> Result<Vec<DBEntry>>{
             let ref_entry = get_ref_entry(password_ref, &db_vec_clone)?;
             entry.old_password_ = ref_entry.old_password_.to_owned();
             iter_count += 1
-        } 
+        }
         iter_count = 0;
         while entry.url_.starts_with(reference_prefix) && iter_count < 1000 {
             let url_ref = entry.url_.strip_prefix(reference_prefix).unwrap().strip_suffix("}").unwrap().to_owned();
@@ -164,7 +164,7 @@ fn remove_references(db_vec: Vec<DBEntry>) -> Result<Vec<DBEntry>>{
         db_vec_wo_refs.push(entry);
     }
 
-    return Ok(db_vec_wo_refs);
+    Ok(db_vec_wo_refs)
 }
 
 fn get_ref_entry(reference: String, db_vec_clone: &Vec<DBEntry>) -> Result<DBEntry>{
@@ -172,7 +172,7 @@ fn get_ref_entry(reference: String, db_vec_clone: &Vec<DBEntry>) -> Result<DBEnt
     let text = ref_vec[2].to_owned();
 
     let ref_entry = find_entry(db_vec_clone, text)?;
-    return Ok(ref_entry.clone());
+    Ok(ref_entry.clone())
 }
 
 fn find_entry(entries: &Vec<DBEntry>, uuid: String) -> Result<&DBEntry> {
@@ -186,7 +186,7 @@ fn find_entry(entries: &Vec<DBEntry>, uuid: String) -> Result<&DBEntry> {
             return Ok(entry);
         }
     }
-    return Err(Error::EntryReference);
+    Err(Error::EntryReference)
 }
 
 fn print_db_content(db: &Database) {
@@ -218,7 +218,6 @@ fn unlock_db(source: &Source) -> Result<Database> {
     let mut db_password;
     let mut password_wrong = true;
 
-    
     match fs::metadata(&source.file_) {
         Ok(_) => (),
         Err(_) => return Err(Error::DBNotPresent { file: source.file_.to_owned() })
@@ -247,5 +246,5 @@ fn unlock_db(source: &Source) -> Result<Database> {
             }
         };
     }
-    return Ok(db);
+    Ok(db)
 }

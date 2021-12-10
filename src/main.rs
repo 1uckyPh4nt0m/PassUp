@@ -1,6 +1,6 @@
 mod pass;
 mod kdbx;
-mod passwsafe;
+mod pwsafe;
 mod config;
 mod chrome;
 mod keyring;
@@ -51,7 +51,7 @@ fn main() {
     } else if config.profile_.type_.eq(&ProfileTypes::Pass) {
         pass::run(&config);
     } else if config.profile_.type_.eq(&ProfileTypes::Pwsafe) {
-        passwsafe::run(&config);
+        pwsafe::run(&config);
     } else if config.profile_.type_.eq(&ProfileTypes::ChromeG) || config.profile_.type_.eq(&ProfileTypes::ChromeK) {
         chrome::run(&config);
     }

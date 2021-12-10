@@ -150,7 +150,10 @@ type Result<T, E=Error> = std::result::Result<T, E>;
 
 pub fn parse_config(path: &str) -> Result<Configuration> {
     let config_r = fs::read(path).context(ConfigOpen { path })?;
-    let config_str = String::from_utf8(config_r).unwrap_or(String::new());
+    let config_str = String::from_utf8(config_r).or(Err(Error::ConfigOpen {
+        path: path.to_string(),
+        source: std::io::Error::new(std::io::ErrorKind::InvalidData, "expected UTF-8 text file"),
+    }))?;
 
     let config: Value = toml::from_str(&config_str).context(ConfigWrongFormat { path })?;
 
@@ -160,9 +163,9 @@ pub fn parse_config(path: &str) -> Result<Configuration> {
                                     .to_ascii_lowercase();
 
     let browser_type;
-    if browser_type_s.eq(&BrowserType::Firefox.to_string()) {
+    if browser_type_s == BrowserType::Firefox.to_string() {
         browser_type = BrowserType::Firefox;
-    } else if browser_type_s.eq(&BrowserType::Chrome.to_string()) {
+    } else if browser_type_s == BrowserType::Chrome.to_string() {
         browser_type = BrowserType::Chrome;
     } else {
         return Err(Error::ConfigBrowserTypeWrong);
@@ -184,7 +187,7 @@ pub fn parse_config(path: &str) -> Result<Configuration> {
     let sources_v = match config.get("sources") {
         Some(source) => source,
         None => {
-            if profile.type_.eq(&ProfileTypes::Kdbx) {
+            if profile.type_== ProfileTypes::Kdbx {
                 return Err(Error::SourcesNotFound { path:path.to_owned() });
             }
             &temp
@@ -228,10 +231,10 @@ pub fn parse_config(path: &str) -> Result<Configuration> {
     };
     let mut urls = HashMap::new();
     for (k,e) in urls_t {
-        urls.insert(k.to_string(), e.to_string().replace("\"", ""));
+        urls.insert(*k, e.to_string().replace("\"", ""));
     }
 
-    return Ok(Configuration::new(browser_type, nr_threads, active_profile, profile, sources, scripts, urls));
+    Ok(Configuration::new(browser_type, nr_threads, active_profile, profile, sources, scripts, urls))
 }
 
 fn create_profiletype_map() -> HashMap<String, ProfileTypes> {
@@ -242,15 +245,14 @@ fn create_profiletype_map() -> HashMap<String, ProfileTypes> {
     profile_map.insert("chrome-gnome".to_owned(), ProfileTypes::ChromeG);
     profile_map.insert("chrome-kde".to_owned(), ProfileTypes::ChromeK);
 
-    return profile_map;
+    profile_map
 }
 
 fn parse_profile(profile: &Value) -> Result<Profile> {
     let type_v = profile.get("type").ok_or(Error::ProfileTypeMissing)?;
     let type_s_ = type_v.to_string().replace("\"", "");
-    let type_s = type_s_.as_str();
    
-    if !ALLOWED_PROFILE_TYPES.contains(&type_s) {
+    if !ALLOWED_PROFILE_TYPES.contains(&type_s_.as_str()) {
         return Err(Error::ProfileTypeWrong);
     }
 
@@ -263,8 +265,8 @@ fn parse_profile(profile: &Value) -> Result<Profile> {
     }
 
     let profile_type_map = create_profiletype_map();
-    let type_ = profile_type_map.get(type_s).unwrap();
-    return Ok(Profile::new((*type_).clone(), sources));
+    let type_ = profile_type_map.get(&type_s_).ok_or(Error::ProfileTypeWrong)?;
+    Ok(Profile::new((*type_).clone(), sources))
 }
 
 fn parse_source(source: &Value, profile: &Profile) -> Result<Source> {
@@ -287,7 +289,7 @@ fn parse_source(source: &Value, profile: &Profile) -> Result<Source> {
 
     let blocklist = parse_blocklist(source);
 
-    return Ok(Source::new(name, file, blocklist));
+    Ok(Source::new(name, file, blocklist))
 }
 
 fn parse_script(script: &Value) -> Result<Script> {
@@ -300,7 +302,7 @@ fn parse_script(script: &Value) -> Result<Script> {
 
     let blocklist = parse_blocklist(script);
 
-    return Ok(Script::new(dir, blocklist.clone()));
+    Ok(Script::new(dir, blocklist.clone()))
 }
 
 fn parse_blocklist(value: &Value) -> Vec<String> {
@@ -315,5 +317,5 @@ fn parse_blocklist(value: &Value) -> Vec<String> {
         blocklist.push(b.to_string().replace("\"", ""));
     }
 
-    return blocklist;
+    blocklist
 }
