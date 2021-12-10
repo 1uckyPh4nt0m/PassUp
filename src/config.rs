@@ -21,33 +21,33 @@ impl fmt::Display for BrowserType {
 
 #[derive(Debug)]
 pub struct Configuration {
-    pub browser_type_: BrowserType,
-    pub nr_threads_: usize,
-    pub active_profile_: String,
-    pub profile_: Profile,
-    pub sources_: Vec<Source>,
-    pub scripts_: Vec<Script>,
-    pub urls_: HashMap<String, String>,
+    pub browser_type: BrowserType,
+    pub nr_threads: usize,
+    pub active_profile: String,
+    pub profile: Profile,
+    pub sources: Vec<Source>,
+    pub scripts: Vec<Script>,
+    pub urls: HashMap<String, String>,
 }
 
 impl Configuration {
     pub fn new(
-        browser_type_: BrowserType,
-        nr_threads_: usize,
-        active_profile_: String,
-        profile_: Profile,
-        sources_: Vec<Source>,
-        scripts_: Vec<Script>,
-        urls_: HashMap<String, String>,
+        browser_type: BrowserType,
+        nr_threads: usize,
+        active_profile: String,
+        profile: Profile,
+        sources: Vec<Source>,
+        scripts: Vec<Script>,
+        urls: HashMap<String, String>,
     ) -> Self {
         Self {
-            browser_type_,
-            nr_threads_,
-            active_profile_,
-            profile_,
-            sources_,
-            scripts_,
-            urls_,
+            browser_type,
+            nr_threads,
+            active_profile,
+            profile,
+            sources,
+            scripts,
+            urls,
         }
     }
 }
@@ -75,42 +75,42 @@ impl fmt::Display for ProfileTypes {
 
 #[derive(Debug)]
 pub struct Profile {
-    pub type_: ProfileTypes,
-    pub sources_: Vec<String>,
+    pub ptype: ProfileTypes,
+    pub sources: Vec<String>,
 }
 
 impl Profile {
-    pub fn new(type_: ProfileTypes, sources_: Vec<String>) -> Self {
-        Self { type_, sources_ }
+    pub fn new(ptype: ProfileTypes, sources: Vec<String>) -> Self {
+        Self { ptype, sources }
     }
 }
 
 #[derive(Debug)]
 pub struct Source {
-    pub name_: String,
-    pub file_: String,
-    pub blocklist_: Vec<String>,
+    pub name: String,
+    pub file: String,
+    pub blocklist: Vec<String>,
 }
 
 impl Source {
-    pub fn new(name_: String, file_: String, blocklist_: Vec<String>) -> Self {
+    pub fn new(name: String, file: String, blocklist: Vec<String>) -> Self {
         Self {
-            name_,
-            file_,
-            blocklist_,
+            name,
+            file,
+            blocklist,
         }
     }
 }
 
 #[derive(Debug, Clone)]
 pub struct Script {
-    pub dir_: String,
-    pub blocklist_: Vec<String>,
+    pub dir: String,
+    pub blocklist: Vec<String>,
 }
 
 impl Script {
-    pub fn new(dir_: String, blocklist_: Vec<String>) -> Self {
-        Self { dir_, blocklist_ }
+    pub fn new(dir: String, blocklist: Vec<String>) -> Self {
+        Self { dir, blocklist }
     }
 }
 
@@ -201,7 +201,7 @@ pub fn parse_config(path: &str) -> Result<Configuration> {
 
     let config: Value = toml::from_str(&config_str).context(ConfigWrongFormat { path })?;
 
-    let browser_type_s = config
+    let browser_types = config
         .get("browser_type")
         .ok_or(Error::ConfigBrowserTypeMissing)?
         .as_str()
@@ -210,9 +210,9 @@ pub fn parse_config(path: &str) -> Result<Configuration> {
         .to_ascii_lowercase();
 
     let browser_type;
-    if browser_type_s == BrowserType::Firefox.to_string() {
+    if browser_types == BrowserType::Firefox.to_string() {
         browser_type = BrowserType::Firefox;
-    } else if browser_type_s == BrowserType::Chrome.to_string() {
+    } else if browser_types == BrowserType::Chrome.to_string() {
         browser_type = BrowserType::Chrome;
     } else {
         return Err(Error::ConfigBrowserTypeWrong);
@@ -225,13 +225,13 @@ pub fn parse_config(path: &str) -> Result<Configuration> {
         .unwrap_or(1)
         .abs() as usize;
 
-    let active_profile_v =
+    let active_profilev =
         config
             .get("active_profile")
             .ok_or(Error::ActiveProfileMissingField {
                 path: path.to_owned(),
             })?;
-    let active_profile = active_profile_v.to_string().replace("\"", "");
+    let active_profile = active_profilev.to_string().replace("\"", "");
 
     let mut profile_v = config.get("profile").ok_or(Error::ProfileNotFound {
         path: path.to_owned(),
@@ -248,7 +248,7 @@ pub fn parse_config(path: &str) -> Result<Configuration> {
     let sources_v = match config.get("sources") {
         Some(source) => source,
         None => {
-            if profile.type_ == ProfileTypes::Kdbx {
+            if profile.ptype == ProfileTypes::Kdbx {
                 return Err(Error::SourcesNotFound {
                     path: path.to_owned(),
                 });
@@ -263,7 +263,7 @@ pub fn parse_config(path: &str) -> Result<Configuration> {
     for source in sources_vec {
         match parse_source(source, &profile) {
             Ok(source) => {
-                if profile.sources_.contains(&source.name_) {
+                if profile.sources.contains(&source.name) {
                     sources.push(source);
                 }
             }
@@ -346,14 +346,14 @@ fn parse_source(source: &Value, profile: &Profile) -> Result<Source> {
     let name_v = source.get("name").ok_or(Error::SourcesNameMissing)?;
     let name = name_v.to_string().replace("\"", "");
 
-    if !profile.sources_.contains(&name) {
+    if !profile.sources.contains(&name) {
         return Err(Error::SourcesIgnore);
     }
 
     let file = match source.get("file") {
         Some(file) => file.to_string().replace("\"", ""),
         None => {
-            if PROFILE_TYPES_WITH_SOURCE.contains(&profile.type_.to_string().as_str()) {
+            if PROFILE_TYPES_WITH_SOURCE.contains(&profile.ptype.to_string().as_str()) {
                 return Err(Error::SourcesFileMissing);
             }
             "".to_owned()

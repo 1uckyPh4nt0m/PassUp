@@ -62,8 +62,8 @@ struct Login {
 }
 
 pub fn run(config: &Configuration) {
-    for source in &config.sources_ {
-        let (db, version) = match decrypt_and_parse_db(&config.profile_.type_, source) {
+    for source in &config.sources {
+        let (db, version) = match decrypt_and_parse_db(&config.profile.ptype, source) {
             Ok(val) => val,
             Err(err) => {
                 println!("Error: {}", err);
@@ -72,13 +72,13 @@ pub fn run(config: &Configuration) {
         };
 
         let (tx, rx) = channel();
-        let nr_jobs = run_update_threads(&db, &source.blocklist_, config, tx);
+        let nr_jobs = run_update_threads(&db, &source.blocklist, config, tx);
 
         let mut db_vec = Vec::new();
 
         let thread_results = rx.iter().take(nr_jobs);
         for thread_result in thread_results {
-            let output = match thread_result.result_ {
+            let output = match thread_result.result {
                 Ok(output) => output,
                 Err(err) => {
                     eprintln!("Error while executing Nightwatch: {}", err);
@@ -86,11 +86,11 @@ pub fn run(config: &Configuration) {
                 }
             };
 
-            let mut db_entry = thread_result.db_entry_;
+            let mut db_entry = thread_result.db_entry;
             if output.status.success() {
                 println!(
                     "Updated password on website {}, with username {}",
-                    &db_entry.url_, &db_entry.username_
+                    &db_entry.url, &db_entry.username
                 );
                 db_vec.push(db_entry);
             } else {
@@ -100,13 +100,13 @@ pub fn run(config: &Configuration) {
                     output,
                 };
                 eprintln!("{}", err);
-                db_entry.new_password_ = db_entry.old_password_.to_owned();
+                db_entry.new_password = db_entry.old_password.to_owned();
                 db_vec.push(db_entry);
             }
         }
         let updated_db = DB::new(db_vec);
 
-        match update_db(&config.profile_.type_, source, &updated_db, version) {
+        match update_db(&config.profile.ptype, source, &updated_db, version) {
             Ok(_) => (),
             Err(err) => {
                 eprintln!("Error: {}", err);
@@ -116,14 +116,14 @@ pub fn run(config: &Configuration) {
     }
 }
 
-fn cipher(encrypt: bool, text: &[u8], version: &[u8], type_: &ProfileTypes) -> Result<Vec<u8>> {
+fn cipher(encrypt: bool, text: &[u8], version: &[u8], ptype: &ProfileTypes) -> Result<Vec<u8>> {
     let salt = b"saltysalt";
     let iv = [32u8; 16];
     let iterations = 1;
     let pass;
     if version == b"v10" {
         pass = b"peanuts".to_vec();
-    } else if type_.eq(&ProfileTypes::ChromeG) {
+    } else if ptype.eq(&ProfileTypes::ChromeG) {
         pass = keyring::get_chrome_password()
             .context(KeyringError)
             .context(LibError)?
@@ -156,11 +156,11 @@ fn cipher(encrypt: bool, text: &[u8], version: &[u8], type_: &ProfileTypes) -> R
     Ok(result)
 }
 
-fn decrypt_and_parse_db(type_: &ProfileTypes, source: &Source) -> Result<(DB, Vec<u8>)> {
-    let sql_db = Connection::open(&source.file_)
+fn decrypt_and_parse_db(ptype: &ProfileTypes, source: &Source) -> Result<(DB, Vec<u8>)> {
+    let sql_db = Connection::open(&source.file)
         .context(SqliteError)
         .context(DBOpenError {
-            file: source.file_.to_owned(),
+            file: source.file.to_owned(),
         })?;
 
     let mut stmt = sql_db
@@ -192,7 +192,7 @@ fn decrypt_and_parse_db(type_: &ProfileTypes, source: &Source) -> Result<(DB, Ve
         }
         let encrypted_password: Vec<u8> = login.password;
         version = encrypted_password[0..3].to_ascii_lowercase();
-        let decrypted_u8 = cipher(false, &encrypted_password[3..], &version, type_)?;
+        let decrypted_u8 = cipher(false, &encrypted_password[3..], &version, ptype)?;
         let password = str::from_utf8(&decrypted_u8)
             .context(Utf8Error)
             .context(StringConversionError)?;
@@ -207,15 +207,15 @@ fn decrypt_and_parse_db(type_: &ProfileTypes, source: &Source) -> Result<(DB, Ve
     Ok((DB::new(db_vec), version))
 }
 
-fn update_db(type_: &ProfileTypes, source: &Source, db: &DB, version: Vec<u8>) -> Result<()> {
-    let sql_db = Connection::open(&source.file_)
+fn update_db(ptype: &ProfileTypes, source: &Source, db: &DB, version: Vec<u8>) -> Result<()> {
+    let sql_db = Connection::open(&source.file)
         .context(SqliteError)
         .context(DBOpenError {
-            file: source.file_.to_owned(),
+            file: source.file.to_owned(),
         })?;
 
     for entry in &db.entries {
-        let password_u8 = cipher(true, entry.new_password_.as_bytes(), &version, type_)?;
+        let password_u8 = cipher(true, entry.new_password.as_bytes(), &version, ptype)?;
         let mut query = sql_db
             .prepare(
                 "UPDATE logins SET password_value = ? WHERE action_url = ? AND username_value = ?",
@@ -223,7 +223,7 @@ fn update_db(type_: &ProfileTypes, source: &Source, db: &DB, version: Vec<u8>) -
             .context(SqliteError)
             .context(SqlQueryError)?;
         query
-            .execute(params![password_u8, entry.url_, entry.username_])
+            .execute(params![password_u8, entry.url, entry.username])
             .context(SqliteError)
             .context(SqlQueryError)?;
     }

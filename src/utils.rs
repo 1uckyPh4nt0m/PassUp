@@ -31,35 +31,35 @@ pub enum Uuid {
 
 #[derive(Debug, Clone)]
 pub struct DBEntry {
-    pub url_: String,
-    pub username_: String,
-    pub old_password_: String,
-    pub new_password_: String,
-    pub uuid_: Uuid,
+    pub url: String,
+    pub username: String,
+    pub old_password: String,
+    pub new_password: String,
+    pub uuid: Uuid,
 }
 
 impl DBEntry {
     pub fn new(
-        url_: String,
-        username_: String,
-        old_password_: String,
-        new_password_: String,
+        url: String,
+        username: String,
+        old_password: String,
+        new_password: String,
     ) -> Self {
         Self {
-            url_,
-            username_,
-            old_password_,
-            new_password_,
-            uuid_: Uuid::None,
+            url,
+            username,
+            old_password,
+            new_password,
+            uuid: Uuid::None,
         }
     }
     pub fn empty() -> Self {
         Self {
-            url_: "".to_owned(),
-            username_: "".to_owned(),
-            old_password_: "".to_owned(),
-            new_password_: "".to_owned(),
-            uuid_: Uuid::None,
+            url: "".to_owned(),
+            username: "".to_owned(),
+            old_password: "".to_owned(),
+            new_password: "".to_owned(),
+            uuid: Uuid::None,
         }
     }
 }
@@ -116,7 +116,7 @@ pub enum Error {
         path: String,
     },
     ScriptBlocked,
-    #[snafu(display("Warning: Script for website \'{}\' with username: \'{}\' did not execute successfully\n{}", db_entry.url_, db_entry.username_, str::from_utf8(&output.stdout).unwrap_or("error")))]
+    #[snafu(display("Warning: Script for website \'{}\' with username: \'{}\' did not execute successfully\n{}", db_entry.url, db_entry.username, str::from_utf8(&output.stdout).unwrap_or("error")))]
     NightwatchExecError {
         db_entry: DBEntry,
         output: Output,
@@ -140,12 +140,12 @@ pub enum Error {
 type Result<T, E = Error> = result::Result<T, E>;
 
 pub struct ThreadResult {
-    pub db_entry_: DBEntry,
-    pub result_: Result<Output, utils::Error>,
+    pub db_entry: DBEntry,
+    pub result: Result<Output, utils::Error>,
 }
 impl ThreadResult {
-    fn new(db_entry_: DBEntry, result_: Result<Output, utils::Error>) -> Self {
-        Self { db_entry_, result_ }
+    fn new(db_entry: DBEntry, result: Result<Output, utils::Error>) -> Self {
+        Self { db_entry, result }
     }
 }
 
@@ -196,16 +196,16 @@ pub fn exec_nightwatch(
             browser_type,
             "--test",
             script_path,
-            &db_entry.username_,
-            &db_entry.old_password_,
-            &db_entry.new_password_,
+            &db_entry.username,
+            &db_entry.old_password,
+            &db_entry.new_password,
         ],
         port,
     )
 }
 
 fn get_url_check_source_blocklist(
-    url_: &str,
+    url: &str,
     blocklist: &[String],
     urls: &HashMap<String, String>,
 ) -> Result<String> {
@@ -213,10 +213,10 @@ fn get_url_check_source_blocklist(
     let re_protocol = Regex::new(&protocol)
         .context(RegexLibError)
         .context(RegexError { expr: protocol })?;
-    let mut url_protocol = url_.to_owned();
-    if !re_protocol.is_match(url_) {
+    let mut url_protocol = url.to_owned();
+    if !re_protocol.is_match(url) {
         url_protocol.push_str("https://");
-        url_protocol.push_str(url_);
+        url_protocol.push_str(url);
     }
     let target_url = Url::parse(&url_protocol)
         .context(UrlError)
@@ -255,18 +255,18 @@ pub fn get_url_and_script_path(
     db_entry: &DBEntry,
 ) -> Result<String> {
     let mut path = String::new();
-    for script in config.scripts_.iter() {
+    for script in config.scripts.iter() {
         let mut script_path = PathBuf::new();
-        script_path.push(&script.dir_);
+        script_path.push(&script.dir);
 
-        let url = get_url_check_source_blocklist(&db_entry.url_, blocklist, &config.urls_)?;
+        let url = get_url_check_source_blocklist(&db_entry.url, blocklist, &config.urls)?;
         let script_name = format!("{}.js", url);
 
         script_path.push(&script_name);
         path = script_path
             .to_str()
             .ok_or(Error::ScriptPathError {
-                url: db_entry.url_.to_owned(),
+                url: db_entry.url.to_owned(),
             })?
             .to_owned();
 
@@ -274,7 +274,7 @@ pub fn get_url_and_script_path(
             continue;
         }
 
-        if script.blocklist_.contains(&script_name) {
+        if script.blocklist.contains(&script_name) {
             return Err(Error::ScriptBlocked);
         }
         return Ok(path);
@@ -289,14 +289,14 @@ pub fn check_dependencies(config: &Configuration) -> Result<()> {
             program: "Nightwatch",
         });
     }
-    if config.browser_type_ == BrowserType::Firefox {
+    if config.browser_type == BrowserType::Firefox {
         if which(FIREFOX_BIN).is_err() {
             return Err(Error::DependencyMissingError {
                 binary_name: FIREFOX_BIN,
                 program: "Firefox",
             });
         }
-    } else if config.browser_type_ == BrowserType::Chrome && which(CHROME_BIN).is_err() {
+    } else if config.browser_type == BrowserType::Chrome && which(CHROME_BIN).is_err() {
         return Err(Error::DependencyMissingError {
             binary_name: CHROME_BIN,
             program: "Chrome",
@@ -318,7 +318,7 @@ pub fn run_update_threads(
 ) -> usize {
     let mut port;
     let browser_type;
-    if config.browser_type_ == BrowserType::Firefox {
+    if config.browser_type == BrowserType::Firefox {
         port = FIREFOX_PORT;
         browser_type = BrowserType::Firefox.to_string();
     } else {
@@ -326,7 +326,7 @@ pub fn run_update_threads(
         browser_type = BrowserType::Chrome.to_string();
     }
     let mut nr_jobs = 0usize;
-    let pool = ThreadPool::new(config.nr_threads_);
+    let pool = ThreadPool::new(config.nr_threads);
     for db_entry in db.entries.iter() {
         let entry = db_entry.clone();
         let script_path = match get_url_and_script_path(config, blocklist, db_entry) {

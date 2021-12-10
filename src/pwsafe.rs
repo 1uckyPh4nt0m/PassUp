@@ -63,7 +63,7 @@ pub enum Error {
 }
 
 pub fn run(config: &Configuration) {
-    for source in &config.sources_ {
+    for source in &config.sources {
         let (db, db_password, version, records) = match unlock_and_parse_db(source) {
             Ok(values) => values,
             Err(err) => {
@@ -73,12 +73,12 @@ pub fn run(config: &Configuration) {
         };
 
         let (tx, rx) = channel();
-        let nr_jobs = run_update_threads(&db, &source.blocklist_, config, tx);
+        let nr_jobs = run_update_threads(&db, &source.blocklist, config, tx);
 
         let mut updated_entries = Vec::new();
         let thread_results = rx.iter().take(nr_jobs);
         for thread_result in thread_results {
-            let output = match thread_result.result_ {
+            let output = match thread_result.result {
                 Ok(output) => output,
                 Err(err) => {
                     eprintln!("Error while executing Nightwatch: {}", err);
@@ -86,7 +86,7 @@ pub fn run(config: &Configuration) {
                 }
             };
 
-            let mut db_entry = thread_result.db_entry_;
+            let mut db_entry = thread_result.db_entry;
             if !output.status.success() {
                 let db_entry_ = db_entry.clone();
                 let err = utils::Error::NightwatchExecError {
@@ -94,11 +94,11 @@ pub fn run(config: &Configuration) {
                     output,
                 };
                 eprintln!("{}", err);
-                db_entry.new_password_ = db_entry.old_password_.to_owned();
+                db_entry.new_password = db_entry.old_password.to_owned();
             } else {
                 println!(
                     "Updated password on website {}, with username {}",
-                    db_entry.url_, db_entry.username_
+                    db_entry.url, db_entry.username
                 );
             }
             updated_entries.push(db_entry);
@@ -120,7 +120,7 @@ pub fn unlock_and_parse_db(source: &Source) -> Result<(DB, String, u16, Vec<(u8,
 
     println!(
         "Please enter password for {} at {}",
-        source.name_, source.file_
+        source.name, source.file
     );
     let mut entry_vec = Vec::new();
     let mut record_vec = Vec::new();
@@ -129,10 +129,10 @@ pub fn unlock_and_parse_db(source: &Source) -> Result<(DB, String, u16, Vec<(u8,
 
     while password_wrong {
         db_password = read_password().unwrap_or_else(|_| "".to_owned());
-        let file = fs::File::open(&source.file_)
+        let file = fs::File::open(&source.file)
             .context(IoError)
             .context(OpenFailed {
-                file: source.file_.to_owned(),
+                file: source.file.to_owned(),
             })?;
         let breader_file = io::BufReader::new(file);
         let mut psdb = match PwsafeReader::new(breader_file, db_password.as_bytes()) {
@@ -146,7 +146,7 @@ pub fn unlock_and_parse_db(source: &Source) -> Result<(DB, String, u16, Vec<(u8,
                     continue;
                 } else {
                     return Err(Error::ReaderError {
-                        file: source.file_.to_owned(),
+                        file: source.file.to_owned(),
                         err: err.to_string(),
                     });
                 }
@@ -159,7 +159,7 @@ pub fn unlock_and_parse_db(source: &Source) -> Result<(DB, String, u16, Vec<(u8,
             Ok(ver) => ver,
             Err(_) => {
                 return Err(Error::HeaderError {
-                    file: source.file_.to_owned(),
+                    file: source.file.to_owned(),
                 })
             }
         };
@@ -170,7 +170,7 @@ pub fn unlock_and_parse_db(source: &Source) -> Result<(DB, String, u16, Vec<(u8,
                 Ok(field) => field,
                 Err(err) => {
                     return Err(Error::ReadField {
-                        file: source.file_.to_owned(),
+                        file: source.file.to_owned(),
                         err: err.to_string(),
                     })
                 }
@@ -195,17 +195,17 @@ pub fn unlock_and_parse_db(source: &Source) -> Result<(DB, String, u16, Vec<(u8,
             };
             record_vec.push((field_type, field_data));
             match &record {
-                PwsafeRecordField::Url(url_provided) => entry.url_ = url_provided.to_owned(),
-                PwsafeRecordField::Username(username) => entry.username_ = username.to_owned(),
-                PwsafeRecordField::Password(password) => entry.old_password_ = password.to_owned(),
-                PwsafeRecordField::Uuid(uuid) => entry.uuid_ = Uuid::Pwsafe(uuid.to_owned()),
+                PwsafeRecordField::Url(url_provided) => entry.url = url_provided.to_owned(),
+                PwsafeRecordField::Username(username) => entry.username = username.to_owned(),
+                PwsafeRecordField::Password(password) => entry.old_password = password.to_owned(),
+                PwsafeRecordField::Uuid(uuid) => entry.uuid = Uuid::Pwsafe(uuid.to_owned()),
                 PwsafeRecordField::EndOfRecord => {
                     let mut entry_ = entry.clone();
-                    if !entry_.url_.is_empty()
-                        && !entry_.username_.is_empty()
-                        && !entry_.old_password_.is_empty()
+                    if !entry_.url.is_empty()
+                        && !entry_.username.is_empty()
+                        && !entry_.old_password.is_empty()
                     {
-                        entry_.new_password_ =
+                        entry_.new_password =
                             get_pw().context(UtilsError).context(UtilsLibError)?;
                         entry_vec.push(entry_);
                     }
@@ -216,7 +216,7 @@ pub fn unlock_and_parse_db(source: &Source) -> Result<(DB, String, u16, Vec<(u8,
         }
         if let Err(err) = psdb.verify() {
             return Err(Error::VerifyDb {
-                file: source.file_.to_owned(),
+                file: source.file.to_owned(),
                 err: err.to_string(),
             });
         }
@@ -232,10 +232,10 @@ pub fn update_db(
     version: u16,
 ) -> Result<()> {
     let err = DbUpdateFailed {
-        file: source.file_.to_owned(),
+        file: source.file.to_owned(),
     };
 
-    let filename = source.file_.to_owned();
+    let filename = source.file.to_owned();
     let filename_copy = format!("{}_copy", &filename);
     fs::rename(&filename, &filename_copy)
         .context(IoError)
@@ -270,13 +270,13 @@ pub fn update_db(
         match &record {
             PwsafeRecordField::Uuid(uuid) => {
                 for entry in db.entries.iter() {
-                    if Uuid::Pwsafe(uuid.to_owned()) == entry.uuid_ {
+                    if Uuid::Pwsafe(uuid.to_owned()) == entry.uuid {
                         db_entry = entry.to_owned();
                     }
                 }
             }
             PwsafeRecordField::Password(_) => {
-                record_data = db_entry.new_password_.as_bytes().to_vec()
+                record_data = db_entry.new_password.as_bytes().to_vec()
             }
             PwsafeRecordField::EndOfRecord => db_entry = DBEntry::empty(),
             _ => (),

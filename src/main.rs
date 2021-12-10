@@ -41,14 +41,14 @@ fn main() {
         return;
     };
 
-    if config.profile_.type_.eq(&ProfileTypes::Kdbx) {
+    if config.profile.ptype.eq(&ProfileTypes::Kdbx) {
         kdbx::run(&config);
-    } else if config.profile_.type_.eq(&ProfileTypes::Pass) {
+    } else if config.profile.ptype.eq(&ProfileTypes::Pass) {
         pass::run(&config);
-    } else if config.profile_.type_.eq(&ProfileTypes::Pwsafe) {
+    } else if config.profile.ptype.eq(&ProfileTypes::Pwsafe) {
         pwsafe::run(&config);
-    } else if config.profile_.type_.eq(&ProfileTypes::ChromeG)
-        || config.profile_.type_.eq(&ProfileTypes::ChromeK)
+    } else if config.profile.ptype.eq(&ProfileTypes::ChromeG)
+        || config.profile.ptype.eq(&ProfileTypes::ChromeK)
     {
         chrome::run(&config);
     }

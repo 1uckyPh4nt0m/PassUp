@@ -49,7 +49,7 @@ enum Error {
 type Result<T, E = Error> = result::Result<T, E>;
 
 pub fn run(config: &Configuration) {
-    for source in &config.sources_ {
+    for source in &config.sources {
         let mut kpdb_db = match unlock_db(source) {
             Ok(db) => db,
             Err(err) => {
@@ -66,11 +66,11 @@ pub fn run(config: &Configuration) {
         };
 
         let (tx, rx) = channel();
-        let nr_jobs = run_update_threads(&db, &source.blocklist_, config, tx);
+        let nr_jobs = run_update_threads(&db, &source.blocklist, config, tx);
 
         let thread_results = rx.iter().take(nr_jobs);
         for thread_result in thread_results {
-            let output = match thread_result.result_ {
+            let output = match thread_result.result {
                 Ok(output) => output,
                 Err(err) => {
                     eprintln!("Error while executing Nightwatch: {}", err);
@@ -78,13 +78,13 @@ pub fn run(config: &Configuration) {
                 }
             };
 
-            let db_entry = thread_result.db_entry_;
+            let db_entry = thread_result.db_entry;
             if output.status.success() {
                 let mut new_entry = Entry::new();
-                new_entry.set_url(&db_entry.url_);
-                new_entry.set_username(&db_entry.username_);
-                new_entry.set_password(&db_entry.new_password_);
-                let uuid = match db_entry.uuid_ {
+                new_entry.set_url(&db_entry.url);
+                new_entry.set_username(&db_entry.username);
+                new_entry.set_password(&db_entry.new_password);
+                let uuid = match db_entry.uuid {
                     Uuid::Kdbx(id) => id,
                     _ => {
                         eprintln!("{:?}", WrongUuidType);
@@ -95,7 +95,7 @@ pub fn run(config: &Configuration) {
                 kpdb_db.root_group.add_entry(new_entry);
                 println!(
                     "Updated password on website {}, with username {}",
-                    db_entry.url_, db_entry.username_
+                    db_entry.url, db_entry.username
                 );
             } else {
                 let db_entry_ = db_entry.clone();
@@ -126,7 +126,7 @@ fn parse_db_entry(entry: &mut Entry) -> Result<DBEntry> {
         return Err(Error::CredentialMissing { url });
     }
     let mut dbentry = DBEntry::new(url, username, old_pass, "".to_owned());
-    dbentry.uuid_ = Uuid::Kdbx(entry.uuid);
+    dbentry.uuid = Uuid::Kdbx(entry.uuid);
     Ok(dbentry)
 }
 
@@ -142,7 +142,7 @@ fn parse_kdbx_db(db: &Database) -> Result<DB> {
             }
         };
 
-        db_entry.new_password_ = get_pw().context(UtilsError).context(UtilsLibError)?;
+        db_entry.new_password = get_pw().context(UtilsError).context(UtilsLibError)?;
         db_vec.push(db_entry);
     }
 
@@ -181,11 +181,11 @@ fn resolve_references(db_vec: &Vec<DBEntry>) -> Result<Vec<DBEntry>> {
 
     for entry in db_vec {
         let mut resolved_entry = entry.clone();
-        resolved_entry.username_ = trim_and_substitute(&entry.username_, db_vec, |e| e.username_)?;
-        resolved_entry.old_password_ =
-            trim_and_substitute(&entry.old_password_, db_vec, |e| e.old_password_)?;
-        resolved_entry.new_password_ =
-            trim_and_substitute(&entry.new_password_, db_vec, |e| e.new_password_)?;
+        resolved_entry.username = trim_and_substitute(&entry.username, db_vec, |e| e.username)?;
+        resolved_entry.old_password =
+            trim_and_substitute(&entry.old_password, db_vec, |e| e.old_password)?;
+        resolved_entry.new_password =
+            trim_and_substitute(&entry.new_password, db_vec, |e| e.new_password)?;
         db_vec_wo_refs.push(resolved_entry);
     }
 
@@ -202,7 +202,7 @@ fn get_ref_entry(reference: &str, db_vec_clone: &[DBEntry]) -> Result<DBEntry> {
 
 fn find_entry(entries: &[DBEntry], uuid: String) -> Result<&DBEntry> {
     for entry in entries {
-        let current_uuid = match entry.uuid_ {
+        let current_uuid = match entry.uuid {
             Uuid::Kdbx(x) => Some(x),
             _ => None,
         }
@@ -225,25 +225,24 @@ fn print_db_content(db: &Database) {
         };
         println!(
             "{}, {}, {}, {}",
-            db_entry.url_, db_entry.username_, db_entry.old_password_, db_entry.new_password_
+            db_entry.url, db_entry.username, db_entry.old_password, db_entry.new_password
         );
     }
 }
 
-fn update_db(source: &Source, db_: &Database) -> Result<()> {
-    let db = db_.clone();
+fn update_db(source: &Source, db: &Database) -> Result<()> {
     let err = DbUpdateFailed {
-        file: source.file_.to_owned(),
+        file: source.file.to_owned(),
     };
-    fs::remove_file(&source.file_)
+    fs::remove_file(&source.file)
         .context(IoError)
         .context(err.clone())?;
-    let mut file = fs::File::create(&source.file_)
+    let mut file = fs::File::create(&source.file)
         .context(IoError)
         .context(err.clone())?;
     db.save(&mut file).context(KpdbError).context(err)?;
 
-    println!("Finished with {}!", &source.file_);
+    println!("Finished with {}!", &source.file);
     Ok(())
 }
 
@@ -253,26 +252,26 @@ fn unlock_db(source: &Source) -> Result<Database> {
     let mut db_password;
     let mut password_wrong = true;
 
-    match fs::metadata(&source.file_) {
+    match fs::metadata(&source.file) {
         Ok(_) => (),
         Err(_) => {
             return Err(Error::DBNotPresent {
-                file: source.file_.to_owned(),
+                file: source.file.to_owned(),
             })
         }
     }
 
     println!(
         "Please enter password for {} at {}",
-        source.name_, source.file_
+        source.name, source.file
     );
     while password_wrong {
         db_password = read_password().unwrap_or_else(|_| "".to_owned());
         let key = CompositeKey::from_password(&db_password);
-        let mut file = fs::File::open(&source.file_)
+        let mut file = fs::File::open(&source.file)
             .context(IoError)
             .context(OpenFailed {
-                file: source.file_.to_owned(),
+                file: source.file.to_owned(),
             })?;
 
         db = match Database::open(&mut file, &key) {
@@ -286,7 +285,7 @@ fn unlock_db(source: &Source) -> Result<Database> {
             }
             Err(err) => {
                 return Err(Error::OpenFailed {
-                    file: source.file_.to_owned(),
+                    file: source.file.to_owned(),
                     source: LibraryError::KpdbError { source: err },
                 });
             }

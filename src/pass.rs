@@ -29,7 +29,7 @@ pub enum Error {
     PassGenError {
         source: LibraryError,
     },
-    #[snafu(display("Update failed for entry: {}, {}, {}", db_entry.url_, db_entry.username_, db_entry.new_password_))]
+    #[snafu(display("Update failed for entry: {}, {}, {}", db_entry.url, db_entry.username, db_entry.new_password))]
     PassUpdateError {
         db_entry: utils::DBEntry,
     },
@@ -50,10 +50,10 @@ pub fn run(config: &Configuration) {
     };
 
     let blocklist;
-    if config.sources_.is_empty() {
+    if config.sources.is_empty() {
         blocklist = Vec::new();
     } else {
-        blocklist = config.sources_[0].blocklist_.clone();
+        blocklist = config.sources[0].blocklist.clone();
     }
 
     let (tx, rx) = channel();
@@ -61,7 +61,7 @@ pub fn run(config: &Configuration) {
 
     let thread_results = rx.iter().take(nr_jobs);
     for thread_result in thread_results {
-        let output = match thread_result.result_ {
+        let output = match thread_result.result {
             Ok(output) => output,
             Err(err) => {
                 eprintln!("Warning: {}", err);
@@ -69,7 +69,7 @@ pub fn run(config: &Configuration) {
             }
         };
 
-        let db_entry = thread_result.db_entry_;
+        let db_entry = thread_result.db_entry;
         if output.status.success() {
             match update_pass_entry(&db_entry) {
                 Ok(()) => (),
@@ -79,9 +79,9 @@ pub fn run(config: &Configuration) {
                 }
             };
         } else {
-            let db_entry_ = db_entry.clone();
+            let db_entry = db_entry.clone();
             let err = utils::Error::NightwatchExecError {
-                db_entry: db_entry_,
+                db_entry: db_entry,
                 output,
             };
             eprintln!("{}", err);
@@ -178,9 +178,9 @@ fn parse_pass() -> Result<utils::DB> {
     Ok(utils::DB::new(db))
 }
 
-fn update_pass_entry(db_entry_: &utils::DBEntry) -> Result<()> {
-    let db_entry = db_entry_.clone();
-    let pass_entry = format!("{}/{}", db_entry.url_, db_entry.username_);
+fn update_pass_entry(db_entry: &utils::DBEntry) -> Result<()> {
+    let db_entry = db_entry.clone();
+    let pass_entry = format!("{}/{}", db_entry.url, db_entry.username);
     let output = utils::cmd("pass", &["rm", &pass_entry], "0")
         .context(UtilsError)
         .context(CmdError)?;
@@ -197,7 +197,7 @@ fn update_pass_entry(db_entry_: &utils::DBEntry) -> Result<()> {
         Err(_) => return Err(Error::PassUpdateError { db_entry }),
     };
 
-    let pass_input = format!("{}\n{}", db_entry.new_password_, db_entry.new_password_);
+    let pass_input = format!("{}\n{}", db_entry.new_password, db_entry.new_password);
     let echo = match Command::new("echo")
         .arg(pass_input)
         .stdout(match pass.stdin {
