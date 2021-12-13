@@ -34,3 +34,4 @@ reports/FIREFOX_88.0_5.4.0-54-generic_google.com.xml
 reports/FIREFOX_88.0_5.4.0-54-generic_myaccount.google.com.xml
 reports/FIREFOX_88.0_5.4.0-54-generic_reddit.com.xml
 reports/reddit.com.xml
+chrome_decrypt.py

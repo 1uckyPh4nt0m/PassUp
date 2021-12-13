@@ -51,7 +51,7 @@ pub fn run(config: &Configuration) {
             Ok(db) => db,
             Err(err) => {
                 eprintln!("{}", err);
-                return;
+                continue;
             }
         };
 
@@ -91,7 +91,7 @@ pub fn run(config: &Configuration) {
                 continue;
             }
         }
-        match update_db(source, &kpdb_db) {
+        match write_db(source, &kpdb_db) {
             Ok(_) => (),
             Err(err) => {
                 eprintln!("Error: {}", err);
@@ -201,7 +201,7 @@ fn print_db_content(db: &Database) {
     }
 }
 
-fn update_db(source: &Source, db_: &Database) -> Result<()> {
+fn write_db(source: &Source, db_: &Database) -> Result<()> {
     let mut db = db_.clone();
     let err = DbUpdateFailed { file: source.file_.to_owned() };
     std::fs::remove_file(&source.file_).context(IoError).context(err.clone())?;

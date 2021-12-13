@@ -183,7 +183,7 @@ pub fn parse_config(path: &str) -> Result<Configuration> {
     let sources_v = match config.get("sources") {
         Some(source) => source,
         None => {
-            if profile.type_.eq(&ProfileTypes::Kdbx) {
+            if profile.type_.eq(&ProfileTypes::Kdbx) || profile.type_.eq(&ProfileTypes::Pwsafe) {
                 return Err(Error::SourcesNotFound { path:path.to_owned() });
             }
             &temp

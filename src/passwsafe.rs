@@ -77,7 +77,7 @@ pub fn run(config: &Configuration) {
         }
 
         let updated_db = DB::new(updated_entries);
-        match update_db(source, &updated_db, db_password, records, version) {
+        match write_db(source, &updated_db, db_password, records, version) {
             Ok(_) => (),
             Err(err) => {
                 eprintln!("Error: {}", err);
@@ -171,7 +171,7 @@ pub fn unlock_and_parse_db(source: &Source) -> Result<(DB, String, u16, Vec<(u8,
     return Ok((DB::new(entry_vec), db_password, version, record_vec));
 }
 
-pub fn update_db(source: &Source, db: &DB, db_password: String, records: Vec<(u8, Vec<u8>)>, version: u16) -> Result<()> {
+pub fn write_db(source: &Source, db: &DB, db_password: String, records: Vec<(u8, Vec<u8>)>, version: u16) -> Result<()> {
     let err = DbUpdateFailed { file: source.file_.to_owned() };
 
     let filename = source.file_.to_owned();

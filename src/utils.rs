@@ -95,7 +95,7 @@ impl ThreadResult {
 
 pub fn get_pw() -> Result<String> {
     let pass_gen = PasswordGenerator {
-        length: 15,
+        length: 16,
         numbers: true,
         lowercase_letters: true,
         uppercase_letters: true,

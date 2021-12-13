@@ -1,6 +1,6 @@
 // usage:
-// nightwatch --env firefox --test lichess.org.js url userName oldPasswd newPasswd  
-// nightwatch --env firefox --test lichess.org.js http://www.lichess.org bachelor1 password123 password456
+// nightwatch --env firefox --test url userName oldPasswd newPasswd  
+// nightwatch --env firefox --test http://www.lichess.org bachelor1 password123 password456
 module.exports = {
 'lichess.org' : function(browser) {
 	const url = "https://www.lichess.org";

@@ -44,7 +44,7 @@ struct Login {
 
 pub fn run(config: &Configuration) {
     for source in &config.sources_ {
-        let (db, version) = match decrypt_and_parse_db(&config.profile_.type_, source) {
+        let (db, version) = match unlock_and_parse_db(&config.profile_.type_, source) {
             Ok(val) => val,
             Err(err) => {
                 println!("Error: {}", err);
@@ -121,7 +121,7 @@ fn cipher(encrypt: bool, text: Vec<u8>, version: &Vec<u8>, type_: &ProfileTypes)
     return Ok(result);
 }
 
-fn decrypt_and_parse_db(type_: &ProfileTypes, source: &Source) -> Result<(DB, Vec<u8>)> {
+fn unlock_and_parse_db(type_: &ProfileTypes, source: &Source) -> Result<(DB, Vec<u8>)> {
     let sql_db = Connection::open(&source.file_).context(SqliteError).context(DBOpenError { file: source.file_.to_owned() })?;
 
     let mut stmt = sql_db.prepare("SELECT action_url, username_value, password_value FROM logins").context(SqliteError).context(SqlStatementError)?;

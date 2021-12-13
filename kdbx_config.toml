@@ -9,7 +9,7 @@ sources = [ "private-kdbxc" ]
 [[sources]]
 name = "private-kdbxc"
 file = "tests/resources/test_db.kdbx"
-blocklist = [ "chess.com", "github.com", "lichess.org",  ]    #optional
+blocklist = [ "chess.com", "github.com",  ]    #optional
 
 [profile.keepassx]
 type = "kdbx"
@@ -54,6 +54,3 @@ blocklist = [ "live.com.js", "myaccount.google.com.js" ]   #optional
 "skype.com/" = "live.com"
 "(https://)?lichess.org(/([a-z]|[A-Z]|[0-9])*)*" = "lichess.org"
 "non-domain-name-in-DB-file" = ""
-
-[[scripts]]
-dir = "development/my-custom-PassUp-scripts"
