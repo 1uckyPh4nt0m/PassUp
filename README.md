@@ -2,11 +2,11 @@
 
 Automatically update passwords from common Password Managers. Supported Password Managers are:
 - [pass](https://www.passwordstore.org/)
-- [KeePass](https://keepass.info/)(kdbx)
-- [KeePassX](https://www.keepassx.org/)(kdbx)
-- [KeePassXC](https://keepassxc.org/)(kdbx)
-- [PasswordSafe](https://pwsafe.org/)(psafe3)
-- [Chrome](https://www.google.com/intl/de/chrome/)(sqlite)
+- [KeePass](https://keepass.info/) (kdbx)
+- [KeePassX](https://www.keepassx.org/) (kdbx)
+- [KeePassXC](https://keepassxc.org/) (kdbx)
+- [PasswordSafe](https://pwsafe.org/) (psafe3)
+- [Chrome](https://www.google.com/intl/de/chrome/) (sqlite)
 
 ## Getting Started
 ### Prerequisites
@@ -49,6 +49,18 @@ Automatically update passwords from common Password Managers. Supported Password
     sudo apt install libssl-dev pkg-config libsqlite3-dev
     ```
 
+### Prerequisites (Ubuntu)
+
+The following commands can be run on Ubuntu to install required packages:
+
+```
+sudo apt install nodejs nodejs-legacy npm libssl-dev pkg-config libsqlite3-dev
+npm install -g nightwatch
+npm install geckodriver --save-dev
+npm install chromedriver --save-dev
+curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+```
+
 ## Program Usage
 ### Compile and Run
 Compile the package and all the dependencies:
@@ -60,11 +72,11 @@ Run the program:
 cargo run -- [Program arguments]
 ```
 
-Wether or not the browser is executed in headless mode, can be changed in *nightwatch.conf.js*. To disable headless mode comment the *'-headless'* argument out for the desired browser.
+Whether or not the browser is executed in headless mode, can be changed in *nightwatch.conf.js*. To disable headless mode comment the *'-headless'* argument out for the desired browser.
 ### Program Arguments
 Argument | Description
 -------- | -----------
--c, --config \<FILE\> | Where \<FILE\> points to the toml configuration file.
+-c, --config \<FILE\> | Where \<FILE\> points to the TOML configuration file.
 -h, --help | Prints help information
 -V, --version | Prints version information
 
@@ -113,4 +125,4 @@ Allowed configuration parameters:
 - browser_type: ```["firefox", "chrome"]```
 - profile.type: ```["kdbx", "pass", "pwsafe", "chrome-gnome", "chrome-kde"]```
 
-The ```[urls]``` section is used to match the correct script to any url that is provided through the password database.
+The ```[urls]``` section is used to match the correct script to any URL that is provided through the password database.
