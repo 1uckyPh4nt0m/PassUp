@@ -72,7 +72,8 @@ Run the program:
 cargo run -- [Program arguments]
 ```
 
-Whether or not the browser is executed in headless mode, can be changed in *nightwatch.conf.js*. To disable headless mode comment the *'-headless'* argument out for the desired browser.
+Whether or not the browser is executed in headless mode, can be changed in [nightwatch.conf.js](https://github.com/1uckyPh4nt0m/PassUp/blob/master/nightwatch.conf.js). To disable headless mode comment the *'-headless'* argument out for the desired browser, see Section [Nightwatch Configuration](#nightwatch-configuration) for additional information.
+
 ### Program Arguments
 Argument | Description
 -------- | -----------
@@ -126,3 +127,51 @@ Allowed configuration parameters:
 - profile.type: ```["kdbx", "pass", "pwsafe", "chrome-gnome", "chrome-kde"]```
 
 The ```[urls]``` section is used to match the correct script to any URL that is provided through the password database.
+
+### Nightwatch Configuration
+
+An example configuration can be found in [nightwatch.conf.js](https://github.com/1uckyPh4nt0m/PassUp/blob/master/nightwatch.conf.js). It provides two test settings which are ```firefox``` and ```chrome```.
+
+In the Nightwatch configuration file we can add arguments which are passed to the executed browser.
+
+Here is an example for arguments which are passed to Firefox:
+```
+'moz:firefoxOptions': {
+    args: [
+       '-headless',
+       //'-verbose'
+    ],
+}
+```
+
+and for Chrome:
+```
+chromeOptions : {
+    args: [
+        '--headless'
+    ]
+}
+```
+
+For debugging purpuses it can be very beneficial to remove/comment out the ```'-headless'``` argument.
+
+### Nightwatch Debugging
+
+While writing Nightwatch scripts it can be helpful to test them seperatly. 
+
+You can test a single script by executing:
+```
+nightwatch --env test_setting --test url username old_password new_password
+```
+Set ```test_setting``` according to the Nightwatch Configuration. For the example configuration it has to be either ```firefox``` or ```chrome```.
+Set ```url```, ```username```, ```old_password``` and ```new_password``` to the according values.
+
+## Limitations
+
+Anti-bot measures are a problem since they block us from accessing the account. An example would be the [Google Account](https://myaccount.google.com/). The server blocks our request since it detects bot activity.
+
+## Useful Features
+
+We support the cloning of entries for kdbx-based databases. A clone only contains references to the origin and not the values. The references are dereferenced and the values are copied to the clone, see [resolve_references](https://github.com/1uckyPh4nt0m/PassUp/blob/5a87d6e1037216ce0568a2761ba169cd3f11d8b0/src/kdbx.rs#L179).
+
+You can change the password generation parameters in [get_pw](https://github.com/1uckyPh4nt0m/PassUp/blob/5a87d6e1037216ce0568a2761ba169cd3f11d8b0/src/utils.rs#L147). Please refer to the [passwords](https://crates.io/crates/passwords) crate for additional information.
